@@ -48,6 +48,13 @@ Example of the process:
 
 `pm2 start stream.js`
 
+## Endpoints
+
+- GET `/`: I'm a teapot (and I'm crypto positive)
+- POST `/`: Stream
+- GET `/info`: Info
+- GET `/ping`: Ping
+
 ## Expected stream
 
 We have expectations to get Json stream, for example:
@@ -55,7 +62,6 @@ We have expectations to get Json stream, for example:
 ```json
 {
   "from": "+123456789",
-  "to": "+987654321",
   "body": "Hello world"
 }
 ```

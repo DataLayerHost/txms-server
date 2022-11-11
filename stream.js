@@ -5,11 +5,19 @@ const bodyParser = require('body-parser')
 const app = express()
 app.use(bodyParser.json())
 
+app.get('/', (req, res) => {
+  res.sendStatus(418)
+})
+
+app.get('/info', (req, res) => {
+  res.status(200).send(process.env.npm_package_name + ' v' + process.env.npm_package_version)
+})
+
 app.get('/ping', (req, res) => {
   res.sendStatus(200)
-}
+})
 
-app.post('/stream', (req, res) => {
+app.post('/', (req, res) => {
   const debug = (process.env.DEBUG == 1 || process.env.DEBUG == true) ? true : false
 
   const body = req.body.body
@@ -70,18 +78,17 @@ app.post('/stream', (req, res) => {
     .catch(function (err) {
       let error = 'Err(3): <'+hextx.substring(2, 5)+hextx.slice(-3)+'>'
       let errors = { "message": error, "sent": false, "error": err.message, "errno": 3, "date": timestamp() }
-      if(debug) console.error('Err(4)', errors)
+      if(debug) console.error('Err(3)', errors)
       return callback(JSON.stringify(errors), null, res, 500)
     })
   })
-
 })
 
 function callback(error, ok, res, code) {
   if (ok) {
-    res.sendStatus((code ? code : 200)).send(ok)
+    res.status((code ? code : 200)).send(ok)
   } else if (error) {
-    res.sendStatus((code ? code : 500)).send(error)
+    res.status((code ? code : 500)).send(error)
   } else {
     res.sendStatus(500)
   }
