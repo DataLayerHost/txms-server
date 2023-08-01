@@ -1,16 +1,16 @@
-# TXMS server
+# TxMS Server
 
-You can deploy this server to create your own TXMS webhook.
+Utilize this server to develop your unique TxMS webhook.
 
 ## Installation
 
-Node.js 14 or newer is expected.
+Ensure you have Node.js version 14 or above.
 
-### Creation of environment variables
+### Setting Up Environment Variables
 
-To start development version create `.env` file in the root of the project.
+For the development version, construct a `.env` file in the project root directory.
 
-Contents of `.env` file:
+The contents of the `.env` file should include:
 
 ```sh
 DEBUG=…
@@ -18,33 +18,33 @@ PROVIDER=…
 ENDPOINT=…
 ```
 
-Where:
-- DEBUG: Debugging of the program - 1/true / 0/false
-- PROVIDER: Url of the provider used (Currently [Blockbook](https://github.com/cryptohub-digital/blockbook) supported.)
-- ENDPOINT: Endpoint for streaming the Core Transactions
+Definitions:
+- DEBUG: Toggles program debugging - 1/true or 0/false
+- PROVIDER: URL of the utilized provider (Currently, only [Blockbook](https://github.com/trezor/blockbook) is supported.)
+- ENDPOINT: Endpoint for streaming Core Transactions
 
-### Installation of dependencies
+### Installing Dependencies
 
-To install the dependencies, run the command:
+Run the following command to install necessary dependencies:
 
 `npm i`
 
 ## Development
 
-To run the development version, run command:
+To operate the development version, execute this command:
 
 `npm run start`
 
 ## Deployment
 
-To deploy your project on the server, make sure you have correct rights and then follow:
+For server deployment of your project, ascertain appropriate permissions before adhering to these steps:
 
-1. Git clone the repository
+1. Clone the Git repository
 1. Install dependencies
-1. Setup your environment variables
-1. Setup [PM2](https://pm2.keymetrics.io/) daemon process manager
+1. Configure your environment variables
+1. Establish the [PM2](https://pm2.keymetrics.io/) daemon process manager
 
-Example of the process:
+An illustration of the process is as follows:
 
 `pm2 start stream.js`
 
@@ -55,9 +55,9 @@ Example of the process:
 - GET `/info`: Info
 - GET `/ping`: Ping
 
-## Expected stream
+## Anticipated Stream
 
-We have expectations to get Json stream, for example:
+We anticipate receiving a Json stream, such as:
 
 ```json
 {
@@ -66,10 +66,10 @@ We have expectations to get Json stream, for example:
 }
 ```
 
-## Epigram
+## Motto
 
 > 「Cryptoni Confidimus」
 
 ## License
 
-Licensed under the [CORE License](LICENSE).
+This is licensed under the [CORE License](LICENSE).

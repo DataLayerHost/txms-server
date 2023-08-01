@@ -48,7 +48,7 @@ app.post('/', (req, res) => {
       if(debug) console.log('Info', 'HEX message: ' + hextx)
     } else if(typeof rawmsg === 'string' && rawmsg.length !== 0) {
       hextx = txms.decode(rawmsg)
-      if(debug) console.log('Info', 'TXMS message: ' + hextx)
+      if(debug) console.log('Info', 'TxMS message: ' + hextx)
     } else {
       let error = 'Err(2): Empty message part'
       let perror = { "id": null, "message": error, "sent": false, "error": "Empty message part", "errno": 2, "date": timestamp() }
