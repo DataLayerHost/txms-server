@@ -25,6 +25,18 @@ The necessary environment variables are:
 
 This project includes a Docker setup using Traefik as a reverse proxy and Let's Encrypt for HTTPS.
 
+```bash
+sudo docker run -d \
+  -e LETS_ENCRYPT_EMAIL=user@onion.email \
+  -e DOMAIN_NAME=main-ep1.domain.lol \
+  -e DEBUG=0 \
+  -e PROVIDER=https://blockindex.net \
+  -e ENDPOINT=api/v2/sendtx \
+  -p 443:443 \
+  --name txms-main-server \
+  docker pull ghcr.io/datalayerhost/txms-server:latest
+```
+
 #### Docker Compose Example
 
 Create a `docker-compose.yml` file in the project root:
@@ -38,8 +50,8 @@ services:
     container_name: txms-server
     restart: always
     environment:
-      - LETS_ENCRYPT_EMAIL=your-email@domain.com
-      - DOMAIN_NAME=your-domain.com
+      - LETS_ENCRYPT_EMAIL=user@onion.email
+      - DOMAIN_NAME=main-ep1.domain.lol
       - DEBUG=1
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx
@@ -51,8 +63,8 @@ services:
 
 Replace the placeholders with your actual values:
 
-- `your-email@domain.com`: Your email for Let's Encrypt.
-- `your-domain.com`: The domain name for which the SSL certificate is issued.
+- `user@onion.email`: Your email for Let's Encrypt.
+- `main-ep1.domain.lol`: The domain name for which the SSL certificate is issued.
 - `https://blockindex.net`: The URL of your blockchain provider.
 - `api/v2/sendtx`: The endpoint for streaming transactions.
 
