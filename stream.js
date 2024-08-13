@@ -25,7 +25,6 @@ app.post('/', async (c) => {
 
 	const body = await c.req.json();
 	const messageBody = body.body;
-	const number = body.from;
 
 	if (typeof messageBody === 'string' && messageBody.trim().length === 0) {
 		let error = 'Err(1): Empty message';
@@ -88,7 +87,7 @@ app.post('/', async (c) => {
 				"date": timestamp(),
 				"statusCode": err.response?.status,
 			};
-			if (debug) console.error('Err(3)', errors);
+			console.error('Err(3)', errors);
 
 			return c.json(errors, 500);
 		}
