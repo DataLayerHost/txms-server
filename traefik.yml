@@ -1,0 +1,20 @@
+entryPoints:
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: ${LETS_ENCRYPT_EMAIL}
+      storage: /etc/traefik/acme.json
+      keyType: RSA4096
+      httpChallenge:
+        entryPoint: websecure
+
+api:
+  dashboard: false
+  insecure: false

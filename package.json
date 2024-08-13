@@ -1,34 +1,38 @@
 {
-  "name": "txms-server",
-  "version": "1.0.1",
-  "description": "TxMS server",
-  "main": "stream.js",
-  "scripts": {
-    "start": "node stream.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/DataLayerHost/txms-server.git"
-  },
-  "keywords": [
-    "txms",
-    "server",
-    "blockchain",
-    "transaction",
-    "core"
-  ],
-  "author": "DataLayer",
-  "license": "CORE",
-  "bugs": {
-    "url": "https://github.com/DataLayerHost/txms-server/issues"
-  },
-  "homepage": "https://github.com/DataLayerHost/txms-server#readme",
-  "dependencies": {
-    "axios": "^1.4.0",
-    "body-parser": "^1.20.2",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "txms.js": "^1.0.3"
-  }
+	"name": "txms-server",
+	"version": "1.1.0",
+	"description": "TxMS server",
+	"main": "stream.js",
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"start": "node stream.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/DataLayerHost/txms-server.git"
+	},
+	"keywords": [
+		"txms",
+		"server",
+		"blockchain",
+		"transaction",
+		"core",
+		"api",
+		"blockindex",
+		"blockbook"
+	],
+	"author": "DataLayer",
+	"license": "CORE",
+	"bugs": {
+		"url": "https://github.com/DataLayerHost/txms-server/issues"
+	},
+	"homepage": "https://github.com/DataLayerHost/txms-server#readme",
+	"dependencies": {
+		"dotenv": "^16.4.5",
+		"hono": "^4.5.5",
+		"txms.js": "^1.1.0"
+	}
 }
