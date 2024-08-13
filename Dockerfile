@@ -25,14 +25,12 @@ COPY --from=build /usr/src/app /usr/src/app
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy Traefik configuration files and startup script
-COPY traefik.yml.template /etc/traefik/traefik.yml.template
-COPY dynamic.yml.template /etc/traefik/dynamic.yml.template
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
+# Copy Traefik configuration files
+COPY traefik.yml /etc/traefik/traefik.yml
+COPY dynamic.yml /etc/traefik/dynamic.yml
 
 # Expose only the secured port
 EXPOSE 443
 
-# Start both Traefik and the TxMS Server via the startup script
-CMD ["/usr/local/bin/start.sh"]
+# Start both Traefik and the TxMS Server
+CMD ["sh", "-c", "node stream.js & traefik"]
