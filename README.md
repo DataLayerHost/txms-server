@@ -34,7 +34,7 @@ version: '3.7'
 
 services:
   txms-server:
-    image: ghcr.io/DataLayerHost/txms-server:latest
+    image: ghcr.io/datalayerhost/txms-server:latest
     container_name: txms-server
     restart: always
     environment:
