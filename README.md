@@ -1,75 +1,78 @@
 # TxMS Server
 
-Utilize this server to develop your unique TxMS webhook.
+Utilize this server to develop your unique TxMS webhook, securely deployed with Traefik and Let's Encrypt powered by Hono API.
 
 ## Installation
 
-Ensure you have Node.js version 14 or above.
+### Requirements
+
+- **Node.js**: Version 18 or above (20 LTS recommended).
+- **Docker**: Ensure Docker and Docker Compose are installed.
 
 ### Setting Up Environment Variables
 
-For the development version, construct a `.env` file in the project root directory.
+Create a `.env` file or use Docker Compose to set environment variables.
 
-The contents of the `.env` file should include:
+The necessary environment variables are:
 
-```sh
-DEBUG=…
-PROVIDER=…
-ENDPOINT=…
+- **LETS_ENCRYPT_EMAIL**: The email address for Let's Encrypt registration.
+- **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
+- **DEBUG**: Set to `1` or `true` for debugging; otherwise `0` or `false`.
+- **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
+- **ENDPOINT**: The specific endpoint for streaming Core Transactions.
+
+### Docker Deployment
+
+This project includes a Docker setup using Traefik as a reverse proxy and Let's Encrypt for HTTPS.
+
+#### Docker Compose Example
+
+Create a `docker-compose.yml` file in the project root:
+
+```yaml
+version: '3.7'
+
+services:
+  txms-server:
+    image: ghcr.io/DataLayerHost/txms-server:latest
+    container_name: txms-server
+    restart: always
+    environment:
+      - LETS_ENCRYPT_EMAIL=your-email@domain.com
+      - DOMAIN_NAME=your-domain.com
+      - DEBUG=1
+      - PROVIDER=https://blockindex.net
+      - ENDPOINT=api/v2/sendtx
+    ports:
+      - "443:443"
+    volumes:
+      - ./acme.json:/etc/traefik/acme.json
 ```
 
-Definitions:
-- DEBUG: Toggles program debugging - 1/true or 0/false
-- PROVIDER: URL of the utilized provider (Currently, only [Blockbook](https://github.com/trezor/blockbook) is supported.)
-- ENDPOINT: Endpoint for streaming Core Transactions
+Replace the placeholders with your actual values:
 
-### Installing Dependencies
+- `your-email@domain.com`: Your email for Let's Encrypt.
+- `your-domain.com`: The domain name for which the SSL certificate is issued.
+- `https://blockindex.net`: The URL of your blockchain provider.
+- `api/v2/sendtx`: The endpoint for streaming transactions.
 
-Run the following command to install necessary dependencies:
+### Building and Pushing Docker Image
 
-`npm i`
+To automate the Docker image build and push process upon creating a release, GitHub Actions is configured.
 
-## Development
+The workflow file `.github/workflows/release-docker-image.yml` handles:
 
-To operate the development version, execute this command:
+- Checking out the code.
+- Building the Docker image using Node.js 20 LTS and Traefik.
+- Pushing the Docker image to GitHub's Docker registry.
 
-`npm run start`
+### Endpoints
 
-## Deployment
+- **GET `/`**: I'm a teapot (and I'm a cyber).
+- **POST `/`**: Stream - Handles incoming transaction messages and forwards them to Blockbook.
+- **GET `/info`**: Info - Returns the application name and version.
+- **GET `/ping`**: Ping - A simple health check endpoint.
 
-For server deployment of your project, ascertain appropriate permissions before adhering to these steps:
+### License
 
-1. Clone the Git repository
-1. Install dependencies
-1. Configure your environment variables
-1. Establish the [PM2](https://pm2.keymetrics.io/) daemon process manager
-
-An illustration of the process is as follows:
-
-`pm2 start stream.js`
-
-## Endpoints
-
-- GET `/`: I'm a teapot (and I'm crypto positive)
-- POST `/`: Stream
-- GET `/info`: Info
-- GET `/ping`: Ping
-
-## Anticipated Stream
-
-We anticipate receiving a Json stream, such as:
-
-```json
-{
-  "from": "+123456789",
-  "body": "Hello world"
-}
-```
-
-## Motto
-
-> 「Cryptoni Confidimus」
-
-## License
-
-This is licensed under the [CORE License](LICENSE).
+This project is licensed under the [CORE License](LICENSE).

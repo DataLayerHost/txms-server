@@ -1,0 +1,15 @@
+http:
+  routers:
+    txms-router:
+      rule: "Host(`${DOMAIN_NAME}`)"
+      service: txms-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: myresolver
+
+  services:
+    txms-service:
+      loadBalancer:
+        servers:
+          - url: "http://localhost:8080"
