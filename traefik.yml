@@ -9,7 +9,7 @@ providers:
 certificatesResolvers:
   myresolver:
     acme:
-      email: "txms@onion.email"  # Hardcoded email
+      email: "{{ env \"LETS_ENCRYPT_EMAIL\" }}"
       storage: /etc/traefik/acme.json
       keyType: RSA4096
       httpChallenge:
