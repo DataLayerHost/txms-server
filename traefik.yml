@@ -3,6 +3,8 @@ entryPoints:
     address: ":80"
   websecure:
     address: ":443"
+  traefik:
+    address: ":8081"
 
 providers:
   file:
@@ -18,8 +20,8 @@ certificatesResolvers:
         entryPoint: web
 
 api:
-  dashboard: false
-  insecure: false
+  dashboard: true
+  insecure: true
 
 log:
   level: ${TRAEFIK_LOG_LEVEL}

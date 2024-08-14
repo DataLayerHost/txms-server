@@ -44,7 +44,7 @@ sudo docker run -d \
 Create a `docker-compose.yml` file in the project root:
 
 ```yaml
-version: '3.8'
+version: '3.9'
 
 services:
   txms-server:
