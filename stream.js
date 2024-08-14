@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server'
 import txms from 'txms.js';
+import { readFileSync } from 'fs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -13,7 +14,8 @@ app.get('/', (c) => {
 });
 
 app.get('/info', (c) => {
-	const info = `${process.env.npm_package_name} v${process.env.npm_package_version}`;
+	const { name, version } = JSON.parse(readFileSync('./package.json', 'utf-8'));
+	const info = `${name} v${version}`;
 	if (debug) console.info('Info: ', info);
 	return c.text(info, 200);
 });
