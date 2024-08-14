@@ -20,3 +20,6 @@ certificatesResolvers:
 api:
   dashboard: false
   insecure: false
+
+log:
+  level: ${TRAEFIK_LOG_LEVEL}

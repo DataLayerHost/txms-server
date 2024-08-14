@@ -32,5 +32,6 @@ COPY traefik.yml /etc/traefik/traefik.yml
 # Use envsubst to replace environment variables in place at runtime
 CMD sh -c "sed -i 's/\${DOMAIN_NAME}/$DOMAIN_NAME/g' /etc/traefik/dynamic.yml && \
            sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/traefik/traefik.yml && \
+		   sed -i 's/\${TRAEFIK_LOG_LEVEL}/$TRAEFIK_LOG_LEVEL/g' /etc/traefik/traefik.yml && \
            node stream.js & \
            traefik --configFile=/etc/traefik/traefik.yml"
