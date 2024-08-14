@@ -1,0 +1,24 @@
+{
+	# Global options
+	email ${LETS_ENCRYPT_EMAIL}
+	log {
+		output stdout
+		level ${LOG_LEVEL}
+	}
+}
+
+# Redirect HTTP to HTTPS
+:80 {
+	redir https://{host}{uri} permanent
+}
+
+# Primary site with HTTPS
+${DOMAIN_NAME} {
+	encode gzip
+	reverse_proxy localhost:8080
+
+	# Let's Encrypt ACME challenge handling
+	route /.well-known/acme-challenge/* {
+		respond "acme challenge response"
+	}
+}
