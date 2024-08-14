@@ -1,13 +1,13 @@
 # TxMS Server
 
-Utilize this server to develop your unique TxMS webhook, securely deployed with Traefik and Let's Encrypt powered by Hono API.
+Utilize this server to develop your unique TxMS webhook, securely deployed with Caddy and Let's Encrypt powered by Hono API.
 
 ## Installation
 
 ### Requirements
 
 - **Node.js**: Version 20 or above.
-- **Docker**: Ensure Docker and Docker Compose are installed.
+- **Docker**: Ensure Docker (and Docker Compose) are installed.
 
 ### Setting Up Environment Variables
 
@@ -17,7 +17,7 @@ The necessary environment variables are:
 
 - **LETS_ENCRYPT_EMAIL**: The email address for Let's Encrypt registration.
 - **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
-- **DEBUG**: Set to `1` or `true` for debugging; otherwise `0` or `false`.
+- **DEBUG**: Set to `true` for debugging; otherwise`false`.
 - **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
 - **ENDPOINT**: The specific endpoint for streaming Core Transactions.
 
@@ -29,7 +29,8 @@ This project includes a Docker setup using Traefik as a reverse proxy and Let's 
 sudo docker run -d \
   -e LETS_ENCRYPT_EMAIL=txms@onion.email \
   -e DOMAIN_NAME=main-ep1.txms.info \
-  -e DEBUG=0 \
+  -e DEBUG=false \
+  -e PORT=8080 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx \
   -e LOG_LEVEL=info \
@@ -56,7 +57,8 @@ services:
     environment:
       - LETS_ENCRYPT_EMAIL=user@onion.email
       - DOMAIN_NAME=main-ep1.domain.lol
-      - DEBUG=1
+      - DEBUG=false
+      - PORT=8080
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx
       - LOG_LEVEL=info

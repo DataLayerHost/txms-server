@@ -1,9 +1,12 @@
-import 'dotenv/config';
 import { Hono } from 'hono';
-import { createServer } from 'http';
+import { serve } from '@hono/node-server'
 import txms from 'txms.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = new Hono();
+const port = process.env.PORT || 8080;
+const debug = process.env.DEBUG === 'true';
 
 app.get('/', (c) => {
 	return c.text('I\'m a cyber', 418);
@@ -11,6 +14,7 @@ app.get('/', (c) => {
 
 app.get('/info', (c) => {
 	const info = `${process.env.npm_package_name} v${process.env.npm_package_version}`;
+	if (debug) console.info('Info: ', info);
 	return c.text(info, 200);
 });
 
@@ -19,8 +23,6 @@ app.get('/ping', (c) => {
 });
 
 app.post('/', async (c) => {
-	const debug = (process.env.DEBUG == 1 || process.env.DEBUG === 'true');
-
 	const body = await c.req.json();
 	const messageBody = body.body;
 
@@ -96,9 +98,9 @@ function timestamp() {
 	return new Date().toISOString();
 }
 
-const port = 8080;
-const server = createServer(app.fetch);
-
-server.listen(port, () => {
-    console.log(`App running on port ${port}`);
+serve({
+	fetch: app.fetch,
+	port: port
 });
+
+console.log(`Server is running on port: ${port}`);

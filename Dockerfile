@@ -30,7 +30,7 @@ COPY Caddyfile /etc/caddy/Caddyfile
 
 # Replace environment variables in the Caddyfile with sed
 CMD sh -c "sed -i 's/\${DOMAIN_NAME}/$DOMAIN_NAME/g' /etc/caddy/Caddyfile && \
-           sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/caddy/Caddyfile && \
-           sed -i 's/\${LOG_LEVEL}/$LOG_LEVEL/g' /etc/caddy/Caddyfile && \
-           node stream.js & \
-           caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+		sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/caddy/Caddyfile && \
+		sed -i 's/\${LOG_LEVEL}/$LOG_LEVEL/g' /etc/caddy/Caddyfile && \
+		node stream.js & \
+		caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
