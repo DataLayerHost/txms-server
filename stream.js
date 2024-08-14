@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Hono } from 'hono';
+import { createServer } from 'http';
 import txms from 'txms.js';
 
 const app = new Hono();
@@ -96,4 +97,8 @@ function timestamp() {
 }
 
 const port = 8080;
-app.listen(port, () => console.log(`App running on port ${port}`));
+const server = createServer(app.fetch);
+
+server.listen(port, () => {
+    console.log(`App running on port ${port}`);
+});
