@@ -8,8 +8,21 @@ http:
       tls:
         certResolver: myresolver
 
+    txms-router-http:
+      rule: "Host(`${DOMAIN_NAME}`)"
+      service: txms-service
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+
   services:
     txms-service:
       loadBalancer:
         servers:
           - url: "http://localhost:8080"
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
