@@ -32,12 +32,14 @@ sudo docker run -d \
   -e DEBUG=0 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx \
-  -e TRAEFIK_LOG_LEVEL=INFO \
+  -e LOG_LEVEL=info \
   -p 80:80 \
   -p 443:443 \
   --name txms-main-server \
-  ghcr.io/datalayerhost/txms-server:latest
+  ghcr.io/datalayerhost/txms-server:{version}
 ```
+
+Note: Replace `{version}` with the latest release version.
 
 ### Docker Compose Example
 
@@ -57,7 +59,7 @@ services:
       - DEBUG=1
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx
-      - TRAEFIK_LOG_LEVEL=INFO
+      - LOG_LEVEL=info
     ports:
       - "443:443"
       - "80:80"
