@@ -32,6 +32,7 @@ sudo docker run -d \
   -e DEBUG=0 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx \
+  -e TRAEFIK_LOG_LEVEL=INFO \
   -p 80:80 \
   -p 443:443 \
   --name txms-main-server \
@@ -56,6 +57,7 @@ services:
       - DEBUG=1
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx
+      - TRAEFIK_LOG_LEVEL=INFO
     ports:
       - "443:443"
       - "80:80"
@@ -88,9 +90,17 @@ Ensure the following ports are open:
 - **443**: HTTPS port for Traefik.
 
 ```bash
+sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw reload
+```
+
+Enable and test the firewall:
+
+```bash
+sudo ufw enable
+sudo ufw status
 ```
 
 ## Endpoints

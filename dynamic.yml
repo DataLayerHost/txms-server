@@ -1,13 +1,5 @@
 http:
   routers:
-    txms-router:
-      rule: "Host(`${DOMAIN_NAME}`)"
-      service: txms-service
-      entryPoints:
-        - websecure
-      tls:
-        certResolver: myresolver
-
     txms-router-http:
       rule: "Host(`${DOMAIN_NAME}`)"
       service: txms-service
@@ -16,13 +8,19 @@ http:
       middlewares:
         - redirect-to-https
 
+    acme-http:
+      rule: "PathPrefix(`/.well-known/acme-challenge/`)"
+      entryPoints:
+        - web
+      service: acme-service
+
   services:
     txms-service:
       loadBalancer:
         servers:
           - url: "http://localhost:8080"
 
-  middlewares:
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
+    acme-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8080"
