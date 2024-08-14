@@ -32,12 +32,13 @@ sudo docker run -d \
   -e DEBUG=0 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx \
+  -p 80:80 \
   -p 443:443 \
   --name txms-main-server \
   ghcr.io/datalayerhost/txms-server:latest
 ```
 
-#### Docker Compose Example
+### Docker Compose Example
 
 Create a `docker-compose.yml` file in the project root:
 
@@ -57,6 +58,7 @@ services:
       - ENDPOINT=api/v2/sendtx
     ports:
       - "443:443"
+      - "80:80"
     volumes:
       - ./acme.json:/etc/traefik/acme.json
 ```
@@ -68,7 +70,7 @@ Replace the placeholders with your actual values:
 - `https://blockindex.net`: The URL of your blockchain provider.
 - `api/v2/sendtx`: The endpoint for streaming transactions.
 
-### Building and Pushing Docker Image
+## Building and Pushing Docker Image
 
 To automate the Docker image build and push process upon creating a release, GitHub Actions is configured.
 
@@ -78,13 +80,26 @@ The workflow file `.github/workflows/release-docker-image.yml` handles:
 - Building the Docker image using Node.js 20 LTS and Traefik.
 - Pushing the Docker image to GitHub's Docker registry.
 
-### Endpoints
+## Firewall Rules
+
+Ensure the following ports are open:
+
+- **80**: HTTP port for Traefik.
+- **443**: HTTPS port for Traefik.
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+## Endpoints
 
 - **GET `/`**: I'm a teapot (and I'm a cyber).
 - **POST `/`**: Stream - Handles incoming transaction messages and forwards them to Blockbook.
 - **GET `/info`**: Info - Returns the application name and version.
 - **GET `/ping`**: Ping - A simple health check endpoint.
 
-### License
+## License
 
 This project is licensed under the [CORE License](LICENSE).
