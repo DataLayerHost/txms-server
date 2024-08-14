@@ -22,6 +22,12 @@ http:
         - web
       service: acme-service
 
+    traefik:
+      rule: "Host(`traefik.txms.info`)"
+      service: api@internal
+      entryPoints:
+        - traefik
+
   services:
     txms-service:
       loadBalancer:
