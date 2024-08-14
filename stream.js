@@ -1,10 +1,8 @@
 import 'dotenv/config';
-import { Hono, json } from 'hono';
+import { Hono } from 'hono';
 import txms from 'txms.js';
 
 const app = new Hono();
-
-app.use('*', json());
 
 app.get('/', (c) => {
 	return c.text('I\'m a cyber', 418);
