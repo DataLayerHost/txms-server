@@ -4,7 +4,7 @@ FROM node:20-alpine AS build
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy the package.json and package-lock.json files
+# Copy the package.json (and package-lock.json) files
 COPY package*.json ./
 
 # Install dependencies
@@ -14,9 +14,9 @@ RUN npm install --only=production
 COPY . .
 
 # Stage 2: Final image with Traefik and TxMS Server
-FROM traefik:v2.5
+FROM traefik:3.1
 
-# Install Node.js (Alpine version) in the Traefik image
+# Install Node.js (Alpine version) and envsubst in the Traefik image
 RUN apk add --no-cache nodejs npm
 
 # Copy the TxMS Server from the build stage
@@ -29,12 +29,8 @@ WORKDIR /usr/src/app
 COPY dynamic.yml /etc/traefik/dynamic.yml
 COPY traefik.yml /etc/traefik/traefik.yml
 
-# Replace placeholders with environment variables directly within the Dockerfile
-RUN sed -i "s/\${DOMAIN_NAME}/${DOMAIN_NAME}/g" /etc/traefik/dynamic.yml && \
-    sed -i "s/\${LETS_ENCRYPT_EMAIL}/${LETS_ENCRYPT_EMAIL}/g" /etc/traefik/traefik.yml
-
-# Expose only the secured port
-EXPOSE 443
-
-# Start both Traefik and the TxMS Server
-CMD ["sh", "-c", "node stream.js & traefik"]
+# Use envsubst to replace environment variables in place at runtime
+CMD sh -c "sed -i 's/\${DOMAIN_NAME}/$DOMAIN_NAME/g' /etc/traefik/dynamic.yml && \
+           sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/traefik/traefik.yml && \
+           node stream.js & \
+           traefik --configFile=/etc/traefik/traefik.yml"

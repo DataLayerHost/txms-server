@@ -6,7 +6,7 @@ Utilize this server to develop your unique TxMS webhook, securely deployed with 
 
 ### Requirements
 
-- **Node.js**: Version 18 or above (20 LTS recommended).
+- **Node.js**: Version 20 or above.
 - **Docker**: Ensure Docker and Docker Compose are installed.
 
 ### Setting Up Environment Variables
@@ -42,7 +42,7 @@ sudo docker run -d \
 Create a `docker-compose.yml` file in the project root:
 
 ```yaml
-version: '3.7'
+version: '3.8'
 
 services:
   txms-server:
