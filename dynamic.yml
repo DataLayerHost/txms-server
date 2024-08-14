@@ -1,7 +1,7 @@
 http:
   routers:
     txms-router:
-      rule: "Host(`{{ env \"DOMAIN_NAME\" }}`)"
+      rule: "Host(`${DOMAIN_NAME}`)"
       service: txms-service
       entryPoints:
         - websecure

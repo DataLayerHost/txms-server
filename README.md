@@ -27,14 +27,14 @@ This project includes a Docker setup using Traefik as a reverse proxy and Let's 
 
 ```bash
 sudo docker run -d \
-  -e LETS_ENCRYPT_EMAIL=user@onion.email \
-  -e DOMAIN_NAME=main-ep1.domain.lol \
+  -e LETS_ENCRYPT_EMAIL=txms@onion.email \
+  -e DOMAIN_NAME=main-ep1.txms.info \
   -e DEBUG=0 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx \
   -p 443:443 \
   --name txms-main-server \
-  docker pull ghcr.io/datalayerhost/txms-server:latest
+  ghcr.io/datalayerhost/txms-server:latest
 ```
 
 #### Docker Compose Example
