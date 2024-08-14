@@ -1,6 +1,5 @@
 import 'dotenv/config';
-import { Hono } from 'hono';
-import { json } from 'hono/json';
+import { Hono, json } from 'hono';
 import txms from 'txms.js';
 
 const app = new Hono();

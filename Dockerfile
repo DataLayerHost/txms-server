@@ -25,9 +25,13 @@ COPY --from=build /usr/src/app /usr/src/app
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy Traefik configuration files
-COPY traefik.yml /etc/traefik/traefik.yml
+# Copy the configuration files into the container
 COPY dynamic.yml /etc/traefik/dynamic.yml
+COPY traefik.yml /etc/traefik/traefik.yml
+
+# Replace placeholders with environment variables directly within the Dockerfile
+RUN sed -i "s/\${DOMAIN_NAME}/${DOMAIN_NAME}/g" /etc/traefik/dynamic.yml && \
+    sed -i "s/\${LETS_ENCRYPT_EMAIL}/${LETS_ENCRYPT_EMAIL}/g" /etc/traefik/traefik.yml
 
 # Expose only the secured port
 EXPOSE 443
