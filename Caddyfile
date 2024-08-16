@@ -5,6 +5,9 @@
 		output stdout
 		level ${LOG_LEVEL}
 	}
+	storage file_system {
+		root /data/caddy
+	}
 }
 
 # Redirect HTTP to HTTPS
