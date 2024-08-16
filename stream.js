@@ -11,6 +11,7 @@ const debug = process.env.DEBUG === 'true';
 const processMMS = process.env.MMS === 'true';
 const bodyName = process.env.BODY_NAME || 'body';
 const mediaName = process.env.MEDIA_NAME || 'mms';
+const provider = (process.env.PROVIDER.endsWith('/') ? process.env.PROVIDER : `${process.env.PROVIDER}/`) + process.env.ENDPOINT;
 
 app.get('/', (c) => {
 	return c.text('I\'m a cyber', 418);
@@ -68,11 +69,6 @@ function getHexTransaction(msg) {
 	} else if (msg.length !== 0) {
 		hextx = txms.decode(msg);
 		if (debug) console.log('Info', `TxMS message: ${hextx}`);
-	} else {
-		const error = 'Err(2): Empty message part';
-		const perror = { "id": null, "message": error, "sent": false, "error": "Empty message part", "errno": 2, "date": timestamp() };
-		if (debug) console.error('Err(2)', perror);
-		throw new Error(perror.message);
 	}
 	return hextx;
 }
@@ -80,7 +76,6 @@ function getHexTransaction(msg) {
 async function processSMS(messageBody) {
 	try {
 		const parts = validateMessage(messageBody.trim());
-		const provider = (process.env.PROVIDER.endsWith('/') ? process.env.PROVIDER : `${process.env.PROVIDER}/`) + process.env.ENDPOINT;
 
 		for (const msg of parts) {
 			const hextx = getHexTransaction(msg);
@@ -92,7 +87,6 @@ async function processSMS(messageBody) {
 }
 
 async function processMMSMessages(mediaUrls) {
-	const provider = (process.env.PROVIDER.endsWith('/') ? process.env.PROVIDER : `${process.env.PROVIDER}/`) + process.env.ENDPOINT;
 	for (const url of mediaUrls) {
 		if (url.endsWith('.txms')) {
 			try {
@@ -107,7 +101,7 @@ async function processMMSMessages(mediaUrls) {
 					if (result) return result;
 				}
 			} catch (err) {
-				console.error(`Error processing MMS URL ${url}: ${err.message}`);
+				if (debug) console.error(`Error processing MMS URL ${url}: ${err.message}`);
 			}
 		}
 	}
@@ -128,18 +122,18 @@ async function sendTransaction(provider, hextx) {
 		const responseData = await response.json();
 
 		if (response.ok && responseData.result) {
-			const ok = `OK: <${hextx.substring(2, 5)}${hextx.slice(-3)}> ${responseData.result}`;
+			const ok = `OK: <${hextx.substring(2, 6)}${hextx.slice(-4)}> ${responseData.result} TxID: ${responseData.result}`;
 			const oks = { "message": ok, "sent": true, "hash": responseData.result, "date": timestamp() };
 			if (debug) console.log('OK', oks);
 			return new Response(JSON.stringify(oks), { status: 200, headers: { 'Content-Type': 'application/json' } });
 		} else {
-			const ok = `OK: <${hextx.substring(2, 5)}${hextx.slice(-3)}>`;
-			const oks = { "message": ok, "sent": true, "date": timestamp() };
-			if (debug) console.log('OK', oks);
-			return new Response(JSON.stringify(oks), { status: 200, headers: { 'Content-Type': 'application/json' } });
+			const nok = `Err(2): <${hextx.substring(2, 6)}${hextx.slice(-4)}> Msg: ${responseData.error.message}`;
+			const noks = { "message": err, "sent": false, "error": responseData.error.message, "date": timestamp() };
+			if (debug) console.log('NOK', noks);
+			return new Response(JSON.stringify(noks), { status: 400, headers: { 'Content-Type': 'application/json' } });
 		}
 	} catch (err) {
-		const error = `Err(3): <${hextx.substring(2, 5)}${hextx.slice(-3)}>`;
+		const error = `Err(3): <${hextx.substring(2, 6)}${hextx.slice(-4)}>`;
 		const errors = {
 			"message": error,
 			"sent": false,

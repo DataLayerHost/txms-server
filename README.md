@@ -28,7 +28,7 @@ The necessary environment variables are:
 - **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
 - **DEBUG**: Set to `true` for debugging; otherwise `false`.
 - **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
-- **ENDPOINT**: The specific endpoint for streaming Core Transactions.
+- **ENDPOINT**: The specific endpoint for streaming Core Transactions. For Blockbook, ending with a `/` is mandatory!
 - **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `error`).
 - **MMS**: Set to `true` to enable MMS support; otherwise `false`.
 - **PORT**: The port on which the server will run.
@@ -47,7 +47,7 @@ sudo docker run -d \
   -e DEBUG=false \
   -e PORT=8080 \
   -e PROVIDER=https://blockindex.net \
-  -e ENDPOINT=api/v2/sendtx \
+  -e ENDPOINT=api/v2/sendtx/ \
   -e LOG_LEVEL=info \
   -p 80:80 \
   -p 443:443 \
@@ -78,7 +78,7 @@ services:
       - DEBUG=false
       - PORT=8080
       - PROVIDER=https://blockindex.net
-      - ENDPOINT=api/v2/sendtx
+      - ENDPOINT=api/v2/sendtx/
       - LOG_LEVEL=info
     ports:
       - "443:443"
@@ -93,7 +93,7 @@ Replace the placeholders with your actual values:
 - `user@onion.email`: Your email for Let's Encrypt.
 - `main-ep1.domain.lol`: The domain name for which the SSL certificate is issued.
 - `https://blockindex.net`: The URL of your blockchain provider.
-- `api/v2/sendtx`: The endpoint for streaming transactions.
+- `api/v2/sendtx/`: The endpoint for streaming transactions. For Blockbook, ending with a `/` is mandatory!
 
 ## Building and Pushing Docker Image
 
