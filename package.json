@@ -1,6 +1,6 @@
 {
 	"name": "txms-server",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "TxMS server",
 	"main": "stream.js",
 	"engines": {
@@ -35,6 +35,6 @@
 		"@hono/node-server": "^1.12.0",
 		"dotenv": "^16.4.5",
 		"hono": "^4.5.5",
-		"txms.js": "^1.1.0"
+		"txms.js": "^1.2.2"
 	}
 }
