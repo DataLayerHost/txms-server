@@ -29,25 +29,30 @@ app.get('/ping', (c) => {
 });
 
 app.post('/', async (c) => {
-	const data = await c.req.json();
-	const messageBody = data[bodyName];
-	const mediaUrls = data[mediaName];
+	try {
+		const data = await c.req.json();
+		const messageBody = data[bodyName];
+		const mediaUrls = data[mediaName];
 
-	// Process SMS/MMS if body is present
-	if (messageBody && messageBody.trim().length > 0) {
-		if (debug) console.log('Info', `Message body: "${messageBody}"`);
-		const smsResult = await processSMS(messageBody);
-		if (smsResult) return smsResult;
+		// Process SMS/MMS if body is present
+		if (messageBody && messageBody.trim().length > 0) {
+			if (debug) console.log('Info', `Message body: "${messageBody}"`);
+			const smsResult = await processSMS(messageBody);
+			if (smsResult) return smsResult;
+		}
+
+		// Process MMS if enabled and attachments are present
+		if (processMMS && mediaUrls && Array.isArray(mediaUrls)) {
+			if (debug) console.log('Info', `MMS URLs: "${mediaUrls}"`);
+			const mmsResult = await processMMSMessages(mediaUrls);
+			if (mmsResult) return mmsResult;
+		}
+
+		return c.text('No valid transactions processed', 422);
+	} catch (err) {
+		if (debug) console.error('Request is not in Json format.');
+		return c.text('Invalid JSON', 400);
 	}
-
-	// Process MMS if enabled and attachments are present
-	if (processMMS && mediaUrls && Array.isArray(mediaUrls)) {
-		if (debug) console.log('Info', `MMS URLs: "${mediaUrls}"`);
-		const mmsResult = await processMMSMessages(mediaUrls);
-		if (mmsResult) return mmsResult;
-	}
-
-	return c.text('No valid transactions processed', 422);
 });
 
 function validateMessage(messageBody) {
@@ -121,28 +126,28 @@ async function sendTransaction(provider, hextx) {
 
 		const responseData = await response.json();
 
-		if (response.ok && responseData.result) {
-			const ok = `OK: <${hextx.substring(2, 6)}${hextx.slice(-4)}> ${responseData.result} TxID: ${responseData.result}`;
+		if (response.ok && responseData && responseData.result) {
+			const ok = `OK: <${hextx.substring(2, 8)}${hextx.slice(-6)}> ${responseData.result} TxID: ${responseData.result}`;
 			const oks = { "message": ok, "sent": true, "hash": responseData.result, "date": timestamp() };
 			if (debug) console.log('OK', oks);
 			return new Response(JSON.stringify(oks), { status: 200, headers: { 'Content-Type': 'application/json' } });
 		} else {
-			const nok = `Err(2): <${hextx.substring(2, 6)}${hextx.slice(-4)}> Msg: ${responseData.error.message}`;
-			const noks = { "message": err, "sent": false, "error": responseData.error.message, "date": timestamp() };
+			const nok = `Err(2): <${hextx.substring(2, 8)}${hextx.slice(-6)}> Msg: ${responseData.error.message}`;
+			const noks = { "message": nok, "sent": false, "error": responseData.error.message, "date": timestamp() };
 			if (debug) console.log('NOK', noks);
 			return new Response(JSON.stringify(noks), { status: 400, headers: { 'Content-Type': 'application/json' } });
 		}
 	} catch (err) {
-		const error = `Err(3): <${hextx.substring(2, 6)}${hextx.slice(-4)}>`;
+		const error = `Err(3): <${hextx.substring(2, 8)}${hextx.slice(-6)}>`;
 		const errors = {
 			"message": error,
 			"sent": false,
-			"error": err.message,
+			"error": err.message || 'Unknown error',
 			"errno": 3,
 			"date": timestamp(),
-			"statusCode": err.response?.status,
+			"statusCode": err.response?.status || 'N/A',
 		};
-		console.error('Err(3)', errors);
+		console.error('Err(3)', err);
 		return new Response(JSON.stringify(errors), { status: 500, headers: { 'Content-Type': 'application/json' } });
 	}
 }
@@ -157,3 +162,9 @@ serve({
 });
 
 console.log(`Server is running on port: ${port}`);
+
+// Handle graceful shutdown on SIGTERM
+process.on('SIGTERM', () => {
+	console.log('Server is shutting down...');
+	process.exit(0);
+});
