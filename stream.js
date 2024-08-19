@@ -12,6 +12,9 @@ const processMMS = process.env.MMS === 'true';
 const bodyName = process.env.BODY_NAME || 'body';
 const mediaName = process.env.MEDIA_NAME || 'mms';
 const provider = (process.env.PROVIDER.endsWith('/') ? process.env.PROVIDER : `${process.env.PROVIDER}/`) + process.env.ENDPOINT;
+const providerType = process.env.PROVIDER_TYPE || 'blockbook';
+const rpcUrl = process.env.RPC_URL || 'http://localhost:8545';
+const rpcMethod = process.env.RPC_METHOD || 'xcb_sendRawTransaction';
 
 function log(level, message, data = null) {
 	const levels = ['debug', 'info', 'warn', 'error'];
@@ -79,10 +82,9 @@ app.post('/', async (c) => {
 
 function validateMessage(messageBody) {
 	if (typeof messageBody !== 'string' || messageBody.trim().length === 0) {
-		const error = 'Err(1): Empty message';
-		const emptyError = { "id": null, "message": error, "sent": false, "error": "Empty message", "errno": 1, "date": timestamp() };
-		log('debug', 'Err(1)', emptyError);
-		throw new Error(emptyError.message);
+		const error = 'Error: Empty message';
+		log('debug', 'Error: Empty message');
+		throw new Error(error);
 	}
 	return messageBody.split(/\u000a/u).map(msg => msg.trim());
 }
@@ -106,7 +108,7 @@ async function processSMS(messageBody) {
 
 		for (const msg of parts) {
 			const hextx = getHexTransaction(msg);
-			return await sendTransaction(provider, hextx);
+			return await sendTransaction(hextx);
 		}
 	} catch (error) {
 		log('debug', 'Error processing SMS:', error);
@@ -125,7 +127,7 @@ async function processMMSMessages(mediaUrls) {
 				const parts = validateMessage(fileContent.trim());
 				for (const msg of parts) {
 					const hextx = getHexTransaction(msg);
-					const result = await sendTransaction(provider, hextx);
+					const result = await sendTransaction(hextx);
 					if (result) return result;
 				}
 			} catch (err) {
@@ -136,47 +138,98 @@ async function processMMSMessages(mediaUrls) {
 	return null;
 }
 
-async function sendTransaction(provider, hextx) {
-	try {
-		log('debug', `Sending to provider: ${provider}`);
-		log('debug', `Transaction: ${hextx}`);
-		const response = await fetch(provider, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'text/plain',
-				'User-Agent': 'txms-server',
-			},
-			body: hextx,
-		});
-		log('debug', `Provider response`, response);
+async function sendTransaction(hextx) {
+	log('debug', `Sending to provider: ${provider}`);
+	log('debug', `Transaction: ${hextx}`);
+	if (providerType === 'blockbook') {
+		log('debug', 'Transaction proceeding with Blockbook type.');
+		try {
+			const response = await fetch(provider, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'text/plain',
+					'User-Agent': 'txms-server',
+				},
+				body: hextx,
+			});
+			log('debug', `Provider response`, response);
 
-		const responseData = await response.json().catch(() => null);
-		log('debug', `Provider response data`, responseData);
+			const responseData = await response.json().catch(() => null);
+			log('debug', `Provider Blockbook response data`, responseData);
 
-		if (response.ok && responseData && responseData.result) {
-			const ok = `OK: <${hextx.substring(2, 8)}${hextx.slice(-6)}> ${responseData.result} TxID: ${responseData.result}`;
-			const oks = { "message": ok, "sent": true, "hash": responseData.result, "date": timestamp() };
-			log('debug', 'Transaction Successful', oks);
-			return new Response(JSON.stringify(oks), { status: 200, headers: { 'Content-Type': 'application/json' } });
-		} else {
-			const errorMessage = responseData?.error?.message || 'Unknown error';
-			const nok = `Err(2): <${hextx.substring(2, 8)}${hextx.slice(-6)}> Msg: ${errorMessage}`;
-			const noks = { "message": nok, "sent": false, "error": errorMessage, "date": timestamp() };
-			log('debug', 'Transaction Failed', noks);
-			return new Response(JSON.stringify(noks), { status: 400, headers: { 'Content-Type': 'application/json' } });
+			if (response.ok && responseData && responseData.result) {
+				const ok = `OK TxID: ${responseData.result}`;
+				log('debug', 'Transaction Successful', ok);
+				return new Response(JSON.stringify({ message: ok, sent: true, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+			} else {
+				const errorMessage = simplifyErrorMessage(responseData?.error?.message || 'Unknown error');
+				log('debug', 'Transaction Failed', errorMessage);
+				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+			}
+		} catch (err) {
+			const error = `Error: Unable to process transaction.`;
+			log('error', 'Transaction Processing Error', err);
+			return new Response(JSON.stringify({ message: error, sent: false, date: timestamp() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
 		}
-	} catch (err) {
-		const error = `Err(3): <${hextx.substring(2, 8)}${hextx.slice(-6)}>`;
-		const errors = {
-			"message": error,
-			"sent": false,
-			"error": err?.message || 'Unknown error',
-			"errno": 3,
-			"date": timestamp(),
-			"statusCode": err?.response?.status || 'N/A',
-		};
-		log('error', 'Transaction Processing Error', errors);
-		return new Response(JSON.stringify(errors), { status: 500, headers: { 'Content-Type': 'application/json' } });
+	} else if (providerType === 'rpc') {
+		log('debug', 'Transaction proceeding with RPC type.');
+		try {
+			// Prepare the JSON-RPC request
+			const requestData = {
+				jsonrpc: '2.0',
+				method: rpcMethod,
+				params: [hextx],
+				id: 1,
+			};
+
+			// Send the transaction to the client
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestData),
+			});
+
+			// Parse the JSON response
+			const responseData = await response.json().catch(() => null);
+			log('debug', `Provider RPC response data`, responseData);
+
+			if (response.ok && responseData && responseData.result) {
+				const ok = `OK TxID: ${responseData.result}`;
+				log('debug', 'Transaction Successful', ok);
+				return new Response(JSON.stringify({ message: ok, sent: true, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+			} else {
+				const errorMessage = responseData?.error?.message || 'Unknown error';
+				log('debug', 'Transaction Failed', errorMessage);
+				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+			}
+		} catch (err) {
+			const error = `Error: Unable to process transaction.`;
+			log('error', 'Transaction Processing Error', err);
+			return new Response(JSON.stringify({ message: error, sent: false, date: timestamp() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+		}
+	} else {
+		const error = `Error: Unknown provider type: ${providerType}`;
+		log('error', 'Unknown provider type', error);
+		return new Response(JSON.stringify({ message: error, sent: false, date: timestamp() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+	}
+}
+
+function simplifyErrorMessage(error) {
+	switch (error) {
+		case "invalid argument 0: json: cannot unmarshal hex string without 0x prefix into Go value of type hexutil.Bytes":
+			return 'Invalid format: Missing 0x prefix.';
+		case "invalid argument 0: json: cannot unmarshal hex string of odd length into Go value of type hexutil.Bytes":
+			return 'Invalid format: Hex string has odd length.';
+		case "rlp: value size exceeds available input length":
+			return 'Transaction data too large.';
+		case "invalid signature or recipient":
+			return 'Invalid signature or recipient.';
+		case "invalid argument 0: json: cannot unmarshal invalid hex string into Go value of type hexutil.Bytes":
+			return 'Invalid format: Invalid hex string.';
+		default:
+			return error;
 	}
 }
 

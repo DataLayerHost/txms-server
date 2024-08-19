@@ -16,7 +16,7 @@ This server provides the following services:
 ### Requirements
 
 - **Node.js**: Version 20 or above.
-- **Docker**: Ensure Docker (and Docker Compose) are installed.
+- **Docker**: Ensure Docker (and Docker Compose - if needed) are installed.
 
 ### Setting Up Environment Variables
 
@@ -33,6 +33,9 @@ The necessary environment variables are:
 - **PORT**: The port on which the server will run.
 - **BODY_NAME**: The name of the body parameter in the request. Default is `body`.
 - **MEDIA_NAME**: The name of the MMS media parameter in the request. Default is `mms`.
+- **PROVIDER_TYPE**: The type of the provider (e.g., `blockbook`, `rpc`).
+- **RPC_URL**: The URL of the RPC provider. Required if `PROVIDER_TYPE` is `rpc`. Default is `http://localhost:8545`.
+- **RPC_METHOD**: The RPC method to call. Required if `PROVIDER_TYPE` is `rpc`. Default is `xcb_sendRawTransaction`.
 
 ### Docker Deployment
 
@@ -134,10 +137,12 @@ sudo ufw status
 
 The server is designed to connect with the following blockchain providers:
 
-- Blockbook: A blockchain indexer supporting Core, Bitcoin, and other cryptocurrencies.
+- Blockchcain:
+  - Blockbook: A blockchain indexer supporting Core, Bitcoin, and other cryptocurrencies.
+  - JSON-RPC: A generic connector for any blockchain supporting JSON-RPC.
 - SMS and MMS receiving services (e.g., Twilio, Nexmo, Plivo) [Charges may apply].
 
-Blockbook can be substituted by connecting directly to a Blockchain node. However, streaming transactions is only possible after the node is fully synchronized, which significantly increases the server's resource requirements. To avoid this, we opted to use external services. If you require a node-based solution, please consider contributing to the project or reaching out to us directly.
+Blockbook can be substituted by connecting directly to a Blockchain node. However, streaming transactions is only possible after the node is fully synchronized, which significantly increases the server's resource requirements. To avoid this, we opted to use external services. If you require a node-based solution, please consider using RPC connector.
 
 ## Free and Paid Plans
 
