@@ -1,6 +1,6 @@
 {
 	"name": "txms-server",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"description": "TxMS server",
 	"main": "stream.js",
 	"engines": {

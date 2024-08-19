@@ -16,7 +16,7 @@ This server provides the following services:
 ### Requirements
 
 - **Node.js**: Version 20 or above.
-- **Docker**: Ensure Docker (and Docker Compose) are installed.
+- **Docker**: Ensure Docker (and Docker Compose - if needed) are installed.
 
 ### Setting Up Environment Variables
 
@@ -26,14 +26,16 @@ The necessary environment variables are:
 
 - **LETS_ENCRYPT_EMAIL**: The email address for Let's Encrypt registration.
 - **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
-- **DEBUG**: Set to `true` for debugging; otherwise `false`.
 - **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
 - **ENDPOINT**: The specific endpoint for streaming Core Transactions. For Blockbook, ending with a `/` is mandatory!
-- **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `error`).
+- **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `warn`, `error`).
 - **MMS**: Set to `true` to enable MMS support; otherwise `false`.
 - **PORT**: The port on which the server will run.
 - **BODY_NAME**: The name of the body parameter in the request. Default is `body`.
 - **MEDIA_NAME**: The name of the MMS media parameter in the request. Default is `mms`.
+- **PROVIDER_TYPE**: The type of the provider (e.g., `blockbook`, `rpc`).
+- **RPC_URL**: The URL of the RPC provider. Required if `PROVIDER_TYPE` is `rpc`. Default is `http://localhost:8545`.
+- **RPC_METHOD**: The RPC method to call. Required if `PROVIDER_TYPE` is `rpc`. Default is `xcb_sendRawTransaction`.
 
 ### Docker Deployment
 
@@ -44,7 +46,6 @@ sudo docker run -d \
   -e LETS_ENCRYPT_EMAIL=txms@onion.email \
   -e DOMAIN_NAME=main-ep1.txms.info \
   -e MMS=false \
-  -e DEBUG=false \
   -e PORT=8080 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx/ \
@@ -75,7 +76,6 @@ services:
       - LETS_ENCRYPT_EMAIL=user@onion.email
       - DOMAIN_NAME=main-ep1.domain.lol
       - MMS=false
-      - DEBUG=false
       - PORT=8080
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx/
@@ -137,10 +137,12 @@ sudo ufw status
 
 The server is designed to connect with the following blockchain providers:
 
-- Blockbook: A blockchain indexer supporting Core, Bitcoin, and other cryptocurrencies.
+- Blockchcain:
+  - Blockbook: A blockchain indexer supporting Core, Bitcoin, and other cryptocurrencies.
+  - JSON-RPC: A generic connector for any blockchain supporting JSON-RPC.
 - SMS and MMS receiving services (e.g., Twilio, Nexmo, Plivo) [Charges may apply].
 
-Blockbook can be substituted by connecting directly to a Blockchain node. However, streaming transactions is only possible after the node is fully synchronized, which significantly increases the server's resource requirements. To avoid this, we opted to use external services. If you require a node-based solution, please consider contributing to the project or reaching out to us directly.
+Blockbook can be substituted by connecting directly to a Blockchain node. However, streaming transactions is only possible after the node is fully synchronized, which significantly increases the server's resource requirements. To avoid this, we opted to use external services. If you require a node-based solution, please consider using RPC connector.
 
 ## Free and Paid Plans
 
