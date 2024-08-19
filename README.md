@@ -26,10 +26,9 @@ The necessary environment variables are:
 
 - **LETS_ENCRYPT_EMAIL**: The email address for Let's Encrypt registration.
 - **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
-- **DEBUG**: Set to `true` for debugging; otherwise `false`.
 - **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
 - **ENDPOINT**: The specific endpoint for streaming Core Transactions. For Blockbook, ending with a `/` is mandatory!
-- **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `error`).
+- **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `warn`, `error`).
 - **MMS**: Set to `true` to enable MMS support; otherwise `false`.
 - **PORT**: The port on which the server will run.
 - **BODY_NAME**: The name of the body parameter in the request. Default is `body`.
@@ -44,7 +43,6 @@ sudo docker run -d \
   -e LETS_ENCRYPT_EMAIL=txms@onion.email \
   -e DOMAIN_NAME=main-ep1.txms.info \
   -e MMS=false \
-  -e DEBUG=false \
   -e PORT=8080 \
   -e PROVIDER=https://blockindex.net \
   -e ENDPOINT=api/v2/sendtx/ \
@@ -75,7 +73,6 @@ services:
       - LETS_ENCRYPT_EMAIL=user@onion.email
       - DOMAIN_NAME=main-ep1.domain.lol
       - MMS=false
-      - DEBUG=false
       - PORT=8080
       - PROVIDER=https://blockindex.net
       - ENDPOINT=api/v2/sendtx/
