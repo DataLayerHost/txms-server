@@ -60,6 +60,11 @@ sudo docker run -d \
 
 Note: Customize your setup and replace `{version}` with the latest release version.
 
+We are providing customized Docker images for the server. You can use the following images:
+
+- Dockerfile: main Docker image with Node.js and Caddy to be connected with the blockchain provider.
+- Dockerfile.core: Docker image to be connected with the Core Blockchain using RPC.
+
 ### Docker Compose Example
 
 Create a `docker-compose.yml` file in the project root:
@@ -179,7 +184,7 @@ We welcome contributions from the community. To contribute, please follow these 
 
 Please ensure your code is well-documented and follows the project's coding standards.
 
-Respect the license and do not close the code from public (there is no need for it).
+Respect the license and do not close the code for public (there is no need for it).
 
 ## License
 
