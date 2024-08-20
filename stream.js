@@ -162,7 +162,7 @@ async function sendTransaction(hextx) {
 				log('debug', 'Transaction Successful', ok);
 				return new Response(JSON.stringify({ message: ok, sent: true, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 			} else {
-				const errorMessage = simplifyErrorMessage(responseData?.error?.message || 'Unknown error');
+				const errorMessage = responseData?.error ? simplifyErrorMessage(responseData?.error) : 'Unknown error';
 				log('debug', 'Transaction Failed', errorMessage);
 				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 			}
@@ -200,7 +200,7 @@ async function sendTransaction(hextx) {
 				log('debug', 'Transaction Successful', ok);
 				return new Response(JSON.stringify({ message: ok, sent: true, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 			} else {
-				const errorMessage = responseData?.error?.message || 'Unknown error';
+				const errorMessage = responseData?.error?.message ? simplifyErrorMessage(responseData?.error?.message) : 'Unknown error';
 				log('debug', 'Transaction Failed', errorMessage);
 				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 			}
@@ -224,10 +224,31 @@ function simplifyErrorMessage(error) {
 			return 'Invalid format: Hex string has odd length.';
 		case "rlp: value size exceeds available input length":
 			return 'Transaction data too large.';
+		case "invalid signature":
+			return 'Invalid signature.';
+		case "invalid recipient":
+			return 'Invalid recipient address.';
 		case "invalid signature or recipient":
 			return 'Invalid signature or recipient.';
 		case "invalid argument 0: json: cannot unmarshal invalid hex string into Go value of type hexutil.Bytes":
 			return 'Invalid format: Invalid hex string.';
+		case "transaction underpriced":
+			return 'Transaction underpriced.';
+		case "nonce too low":
+			return 'Nonce too low.';
+		case "nonce too high":
+			return 'Nonce too high.';
+		case "insufficient funds for energy * price + value":
+		case "insufficient funds for gas * price + value":
+			return 'Insufficient funds for gas * price + value.';
+		case "intrinsic energy too low":
+		case "intrinsic gas too low":
+			return 'Fee limit too low.';
+		case "known transaction":
+		case "already known":
+			return 'Transaction already known.';
+		case "replacement transaction underpriced":
+			return 'Replacement transaction underpriced.';
 		default:
 			return error;
 	}
@@ -235,12 +256,6 @@ function simplifyErrorMessage(error) {
 
 function timestamp() {
 	return new Date().toISOString();
-}
-
-function getAddressFromTx(hex) {
-	const address = hex.slice(27, 71).toLowerCase();
-	log('debug', `Address: ${address}`);
-	return address;
 }
 
 serve({

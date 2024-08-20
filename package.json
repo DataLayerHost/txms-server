@@ -1,6 +1,6 @@
 {
 	"name": "txms-server",
-	"version": "1.2.4",
+	"version": "1.2.5",
 	"description": "TxMS server",
 	"main": "stream.js",
 	"engines": {
@@ -32,9 +32,9 @@
 	},
 	"homepage": "https://github.com/DataLayerHost/txms-server#readme",
 	"dependencies": {
-		"@hono/node-server": "^1.12.0",
+		"@hono/node-server": "^1.12.1",
 		"dotenv": "^16.4.5",
-		"hono": "^4.5.5",
-		"txms.js": "^1.2.2"
+		"hono": "^4.5.6",
+		"txms.js": "^1.2.3"
 	}
 }

@@ -1,0 +1,51 @@
+# Stage 1: Build TxMS Server using Node.js 20 LTS
+FROM node:20-alpine AS build
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy the package.json (and package-lock.json) files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --only=production
+
+# Copy the rest of the application files
+COPY . .
+
+# Stage 2: Final image with Caddy, TxMS Server, and Core Blockchain Client (gocore)
+FROM caddy:alpine
+
+# Install Node.js (Alpine version) in the Caddy image
+RUN apk add --no-cache nodejs npm
+
+# Install curl and bash for downloading the latest gocore release
+RUN apk add --no-cache curl bash
+
+# Download and install the latest gocore (Core Blockchain client) from the official GitHub repo
+RUN LATEST_RELEASE=$(curl -s https://api.github.com/repos/core-coin/go-core/releases/latest | grep "browser_download_url.*linux-amd64" | cut -d : -f 2,3 | tr -d \") && \
+    curl -L $LATEST_RELEASE -o /usr/local/bin/gocore && \
+    chmod +x /usr/local/bin/gocore
+
+# Copy the TxMS Server from the build stage
+COPY --from=build /usr/src/app /usr/src/app
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy the Caddyfile configuration into the container
+COPY Caddyfile /etc/caddy/Caddyfile
+
+# Set environment variables for Core client (gocore)
+ENV CORE_DATA_DIR=/root/.core
+ENV CORE_NETWORK=mainnet
+ENV CORE_HTTP_PORT=8545
+ENV CORE_ENABLED=true
+
+# Replace environment variables in the Caddyfile with sed
+CMD sh -c "sed -i 's/\${DOMAIN_NAME}/$DOMAIN_NAME/g' /etc/caddy/Caddyfile && \
+		sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/caddy/Caddyfile && \
+		sed -i 's/\${LOG_LEVEL}/$LOG_LEVEL/g' /etc/caddy/Caddyfile && \
+		gocore --http --http.addr localhost --http.port $CORE_HTTP_PORT --http.api xcb,net,web3 --datadir $CORE_DATA_DIR --network $CORE_NETWORK & \
+		node stream.js & \
+		caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
