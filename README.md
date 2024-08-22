@@ -7,7 +7,7 @@ Utilize this server to develop your unique TxMS webhook, securely deployed with 
 This server provides the following services:
 
 - Catch the SMS and forward it to the blockchain provider.
-- Catch the MMS attachments `.txms`, fetch them and forward it to the blockchain provider.
+- Catch the MMS attachments, fetch them and forward it to the blockchain provider.
 - Accepting TxMS Binary-to-text transcription and pure hexadecimal data.
 - `0x` prefix is optional for hexadecimal data.
 
@@ -167,7 +167,7 @@ To do so, you can modify the code and create database of numbers, which paid for
 
 The server can handle both SMS and MMS messages. To enable MMS, set the `MMS` environment variable to `true`.
 
-MMS messages can contain `.txms` attachments, which are fetched and forwarded to the blockchain provider.
+MMS messages can contain attachments, which are fetched and forwarded to the blockchain provider.
 
 Pricing for SMS and MMS services may vary depending on the provider. Please check with your provider for more information.
 
