@@ -118,7 +118,7 @@ async function processSMS(messageBody) {
 
 async function processMMSMessages(mediaUrls) {
 	for (const url of mediaUrls) {
-		if (url.endsWith('.txms')) {
+		if (url.endsWith('.txms.txt')) {
 			try {
 				const response = await fetch(url);
 				if (!response.ok) throw new Error(`Failed to fetch file from ${url}`);
