@@ -67,7 +67,7 @@ app.post('/', async (c) => {
 		}
 
 		// Process MMS if enabled and attachments are present
-		if (processMMS && mediaUrls && Array.isArray(mediaUrls)) {
+		if (processMMS && mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0) {
 			log('debug', `MMS URLs: "${mediaUrls}"`);
 			const mmsResult = await processMMSMessages(mediaUrls);
 			if (mmsResult) return mmsResult;
@@ -118,21 +118,19 @@ async function processSMS(messageBody) {
 
 async function processMMSMessages(mediaUrls) {
 	for (const url of mediaUrls) {
-		if (url.endsWith('.txms.txt')) {
-			try {
-				const response = await fetch(url);
-				if (!response.ok) throw new Error(`Failed to fetch file from ${url}`);
-				const fileContent = await response.text();
+		try {
+			const response = await fetch(url);
+			if (!response.ok) throw new Error(`Failed to fetch file from ${url}`);
+			const fileContent = await response.text();
 
-				const parts = validateMessage(fileContent.trim());
-				for (const msg of parts) {
-					const hextx = getHexTransaction(msg);
-					const result = await sendTransaction(hextx);
-					if (result) return result;
-				}
-			} catch (err) {
-				log('debug', `Error processing MMS URL ${url}:`, err.message);
+			const parts = validateMessage(fileContent.trim());
+			for (const msg of parts) {
+				const hextx = getHexTransaction(msg);
+				const result = await sendTransaction(hextx);
+				if (result) return result;
 			}
+		} catch (err) {
+			log('debug', `Error processing MMS URL ${url}:`, err.message);
 		}
 	}
 	return null;
