@@ -10,7 +10,8 @@ const port = process.env.PORT || 8080;
 const logLevel = process.env.LOG_LEVEL || 'info';
 const processMMS = process.env.MMS === 'true';
 const bodyName = process.env.BODY_NAME || 'body';
-const mediaName = process.env.MEDIA_NAME || 'mms';
+const mediaName = process.env.MEDIA_NAME || 'mediaUrls';
+const mediaTypeName = process.env.MEDIA_TYPE_NAME || 'mediaContentTypes';
 const provider = (process.env.PROVIDER.endsWith('/') ? process.env.PROVIDER : `${process.env.PROVIDER}/`) + process.env.ENDPOINT;
 const providerType = process.env.PROVIDER_TYPE || 'blockbook';
 const rpcUrl = process.env.RPC_URL || 'http://localhost:8545';
@@ -58,6 +59,7 @@ app.post('/', async (c) => {
 		const data = await c.req.json();
 		const messageBody = data[bodyName];
 		const mediaUrls = data[mediaName];
+		const mediaContentTypes = data[mediaTypeName];
 
 		// Process SMS/MMS if body is present
 		if (messageBody && messageBody.trim().length > 0) {
@@ -67,9 +69,9 @@ app.post('/', async (c) => {
 		}
 
 		// Process MMS if enabled and attachments are present
-		if (processMMS && mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0) {
+		if (processMMS && mediaUrls && Array.isArray(mediaUrls) && mediaUrls.length > 0 && mediaContentTypes && Array.isArray(mediaContentTypes) && mediaContentTypes.length > 0) {
 			log('debug', `MMS URLs: "${mediaUrls}"`);
-			const mmsResult = await processMMSMessages(mediaUrls);
+			const mmsResult = await processMMSMessages(mediaUrls, mediaContentTypes);
 			if (mmsResult) return mmsResult;
 		}
 
@@ -116,8 +118,16 @@ async function processSMS(messageBody) {
 	}
 }
 
-async function processMMSMessages(mediaUrls) {
-	for (const url of mediaUrls) {
+async function processMMSMessages(mediaUrls, mediaContentTypes) {
+	for (let i = 0; i < mediaUrls.length; i++) {
+		const url = mediaUrls[i];
+		const contentType = mediaContentTypes[i];
+
+		if (contentType !== 'text/plain') {
+			log('debug', `Skipping non-text content type: ${contentType}`);
+			continue;
+		}
+
 		try {
 			const response = await fetch(url);
 			if (!response.ok) throw new Error(`Failed to fetch file from ${url}`);
@@ -238,7 +248,7 @@ function simplifyErrorMessage(error) {
 			return 'Nonce too high.';
 		case "insufficient funds for energy * price + value":
 		case "insufficient funds for gas * price + value":
-			return 'Insufficient funds for gas * price + value.';
+			return 'Insufficient funds for transaction and fees.';
 		case "intrinsic energy too low":
 		case "intrinsic gas too low":
 			return 'Fee limit too low.';

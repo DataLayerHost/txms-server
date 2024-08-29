@@ -7,7 +7,7 @@ Utilize this server to develop your unique TxMS webhook, securely deployed with 
 This server provides the following services:
 
 - Catch the SMS and forward it to the blockchain provider.
-- Catch the MMS attachments, fetch them and forward it to the blockchain provider.
+- Catch the MMS attachments (content type: `text/plain`), fetch them and forward it to the blockchain provider. Ideally set extension as `.txms.txt`.
 - Accepting TxMS Binary-to-text transcription and pure hexadecimal data.
 - `0x` prefix is optional for hexadecimal data.
 
@@ -32,7 +32,8 @@ The necessary environment variables are:
 - **MMS**: Set to `true` to enable MMS support; otherwise `false`.
 - **PORT**: The port on which the server will run.
 - **BODY_NAME**: The name of the body parameter in the request. Default is `body`.
-- **MEDIA_NAME**: The name of the MMS media parameter in the request. Default is `mms`.
+- **MEDIA_NAME**: The name of the MMS media Urls array parameter in the request. Default is `mediaUrls`.
+- **MEDIA_TYPE_NAME**: The name of the MMS media content type array parameter in the request. Default is `mediaContentTypes`.
 - **PROVIDER_TYPE**: The type of the provider (e.g., `blockbook`, `rpc`).
 - **RPC_URL**: The URL of the RPC provider. Required if `PROVIDER_TYPE` is `rpc`. Default is `http://localhost:8545`.
 - **RPC_METHOD**: The RPC method to call. Required if `PROVIDER_TYPE` is `rpc`. Default is `xcb_sendRawTransaction`.
@@ -167,7 +168,7 @@ To do so, you can modify the code and create database of numbers, which paid for
 
 The server can handle both SMS and MMS messages. To enable MMS, set the `MMS` environment variable to `true`.
 
-MMS messages can contain attachments, which are fetched and forwarded to the blockchain provider.
+MMS messages can contain attachments (content type: `text/plain`), which are fetched and forwarded to the blockchain provider. Ideally set extension as `.txms.txt`. You can generate them using the [TxMS Encoder](https://github.com/bchainhub/txms.js) and function `downloadMessage`.
 
 Pricing for SMS and MMS services may vary depending on the provider. Please check with your provider for more information.
 
