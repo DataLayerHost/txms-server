@@ -1,0 +1,19 @@
+services:
+  txms-server:
+    container_name: ${CONTAINER_NAME}
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file:
+      - .runtime.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - core_data:/var/lib/gocore
+
+volumes:
+  caddy_data:
+  caddy_config:
+  core_data:
