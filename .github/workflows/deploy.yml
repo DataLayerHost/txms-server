@@ -28,7 +28,11 @@ on:
         required: true
       RPC_URL:
         required: false
+      SUPABASE_TESTNET_URL:
+        required: true
       SUPABASE_TESTNET_SECRET_KEY:
+        required: true
+      SUPABASE_MAINNET_URL:
         required: true
       SUPABASE_MAINNET_SECRET_KEY:
         required: true
@@ -85,9 +89,9 @@ jobs:
       RPC_URL: ${{ secrets.RPC_URL || vars.RPC_URL || 'http://127.0.0.1:8545' }}
       RPC_METHOD: ${{ vars.RPC_METHOD || 'xcb_sendRawTransaction' }}
       LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
-      SUPABASE_TESTNET_URL: ${{ vars.SUPABASE_TESTNET_URL }}
+      SUPABASE_TESTNET_URL: ${{ secrets.SUPABASE_TESTNET_URL }}
       SUPABASE_TESTNET_SECRET_KEY: ${{ secrets.SUPABASE_TESTNET_SECRET_KEY }}
-      SUPABASE_MAINNET_URL: ${{ vars.SUPABASE_MAINNET_URL }}
+      SUPABASE_MAINNET_URL: ${{ secrets.SUPABASE_MAINNET_URL }}
       SUPABASE_MAINNET_SECRET_KEY: ${{ secrets.SUPABASE_MAINNET_SECRET_KEY }}
       SUPABASE_TIMEOUT_MS: ${{ vars.SUPABASE_TIMEOUT_MS || '5000' }}
       REPOSITORY_OWNER: ${{ github.repository_owner }}
@@ -150,7 +154,12 @@ jobs:
           single_line "RPC_URL" "$RPC_URL"
           [[ "$RPC_URL" =~ ^https?://[A-Za-z0-9][A-Za-z0-9:/?\&=._~%+@,-]*$ ]] || fail "RPC_URL must be an HTTP(S) URL without shell-sensitive characters"
           [[ "$RPC_METHOD" =~ ^[A-Za-z][A-Za-z0-9_]{0,127}$ ]] || fail "RPC_METHOD is invalid"
-          [[ "$LOG_LEVEL" =~ ^(debug|info|warn|error)$ ]] || fail "LOG_LEVEL must be debug, info, warn, or error"
+          case "${LOG_LEVEL,,}" in
+            debug|info|error) normalized_log_level=${LOG_LEVEL,,} ;;
+            warn|warning) normalized_log_level=warn ;;
+            *) fail "LOG_LEVEL must be DEBUG, INFO, WARN, WARNING, or ERROR (case-insensitive)" ;;
+          esac
+          echo "LOG_LEVEL=$normalized_log_level" >> "$GITHUB_ENV"
           if [[ ! "$SUPABASE_TIMEOUT_MS" =~ ^[0-9]+$ ]] || (( SUPABASE_TIMEOUT_MS < 100 || SUPABASE_TIMEOUT_MS > 30000 )); then
             fail "SUPABASE_TIMEOUT_MS must be between 100 and 30000"
           fi

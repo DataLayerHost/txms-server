@@ -133,13 +133,12 @@ Configure these GitHub Actions variables separately in each environment:
 - `HEALTHCHECK_URL`: Optional public health URL, such as `https://txms.example.com/ping`.
 - `RPC_URL`: Optional hosted Core JSON-RPC URL, such as `https://rpc.example.com`. The bundled Core image defaults to its local node when this is unset.
 - `RPC_METHOD`: Optional submission method; defaults to `xcb_sendRawTransaction`.
-- `LOG_LEVEL`: Optional application and Caddy log level: `debug`, `info`, `warn`, or `error`. Defaults to `info`.
+- `LOG_LEVEL`: Optional application and Caddy log level. It accepts `debug`, `info`, `warn`, `warning`, or `error`, case-insensitively, and defaults to `info`.
 - `SUPABASE_TIMEOUT_MS`: Optional Pro lookup timeout; defaults to `5000` milliseconds.
 
 Configure the two Supabase projects once at repository level under **Settings → Secrets and variables → Actions**:
 
-- Repository secrets: `SUPABASE_TESTNET_SECRET_KEY`, `SUPABASE_MAINNET_SECRET_KEY`.
-- Repository variables: `SUPABASE_TESTNET_URL`, `SUPABASE_MAINNET_URL`.
+- Repository secrets: `SUPABASE_TESTNET_URL`, `SUPABASE_TESTNET_SECRET_KEY`, `SUPABASE_MAINNET_URL`, and `SUPABASE_MAINNET_SECRET_KEY`.
 
 The deployment workflow selects the testnet project for `CORE_NETWORK=devin` and the mainnet project for `CORE_NETWORK=mainnet`. Only the selected credentials are written to each server.
 
