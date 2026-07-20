@@ -21,7 +21,7 @@ RUN apk add --no-cache ca-certificates curl \
 	&& curl --fail --location --silent --show-error "$release_url/$asset" --output "/tmp/$asset" \
 	&& curl --fail --location --silent --show-error "$release_url/$asset.checksum" --output "/tmp/$asset.checksum" \
 	&& cd /tmp \
-	&& sha256sum --check "$asset.checksum" \
+	&& sha256sum -c "$asset.checksum" \
 	&& install -m 0755 "$asset" /usr/local/bin/gocore
 
 FROM oven/bun:1.3.14-alpine
