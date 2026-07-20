@@ -1,15 +1,19 @@
 {
 	"name": "txms-server",
-	"version": "1.2.7",
+	"version": "1.2.8",
 	"description": "TxMS server",
-	"main": "stream.js",
+	"main": "src/server.ts",
 	"engines": {
-		"node": ">=20"
+		"bun": ">=1.3.14"
 	},
+	"packageManager": "bun@1.3.14",
 	"type": "module",
 	"scripts": {
-		"start": "node stream.js",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"start": "bun run src/server.ts",
+		"dev": "bun --watch run src/server.ts",
+		"build": "bun build src/server.ts --target=bun --outdir=dist",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
 	},
 	"repository": {
 		"type": "git",
@@ -32,9 +36,11 @@
 	},
 	"homepage": "https://github.com/DataLayerHost/txms-server#readme",
 	"dependencies": {
-		"@hono/node-server": "^1.12.2",
-		"dotenv": "^16.4.5",
-		"hono": "^4.5.9",
-		"txms.js": "^1.2.10"
+		"hono": "^4.12.31",
+		"txms.js": "^1.3.1"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"typescript": "^5.9.3"
 	}
 }

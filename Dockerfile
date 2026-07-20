@@ -1,36 +1,36 @@
-# Stage 1: Build TxMS Server using Node.js 20 LTS
-FROM node:20-alpine AS build
+FROM oven/bun:1.3.14-alpine AS dependencies
 
-# Set the working directory
 WORKDIR /usr/src/app
 
-# Copy the package.json (and package-lock.json) files
-COPY package*.json ./
+COPY package.json ./
+RUN bun install --production --no-save
 
-# Install dependencies
-RUN npm install --only=production
+FROM oven/bun:1.3.14-alpine
 
-# Copy the rest of the application files
-COPY . .
+USER root
+RUN apk add --no-cache caddy
 
-# Stage 2: Final image with Caddy and TxMS Server
-FROM caddy:alpine
-
-# Install Node.js (Alpine version) in the Caddy image
-RUN apk add --no-cache nodejs npm
-
-# Copy the TxMS Server from the build stage
-COPY --from=build /usr/src/app /usr/src/app
-
-# Set the working directory
 WORKDIR /usr/src/app
 
-# Copy the Caddyfile configuration into the container
+ENV PORT=8080 \
+	PROVIDER_TYPE=rpc \
+	RPC_URL=http://127.0.0.1:8545 \
+	RPC_METHOD=xcb_sendRawTransaction \
+	XDG_CONFIG_HOME=/config \
+	XDG_DATA_HOME=/data
+
+COPY --from=dependencies /usr/src/app/node_modules ./node_modules
+COPY package.json ./
+COPY src ./src
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# Replace environment variables in the Caddyfile with sed
-CMD sh -c "sed -i 's/\${DOMAIN_NAME}/$DOMAIN_NAME/g' /etc/caddy/Caddyfile && \
-		sed -i 's/\${LETS_ENCRYPT_EMAIL}/$LETS_ENCRYPT_EMAIL/g' /etc/caddy/Caddyfile && \
-		sed -i 's/\${LOG_LEVEL}/$LOG_LEVEL/g' /etc/caddy/Caddyfile && \
-		node stream.js & \
-		caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+EXPOSE 80 443
+
+VOLUME ["/data", "/config"]
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+	CMD wget --quiet --spider http://127.0.0.1:8080/ping || exit 1
+
+STOPSIGNAL SIGTERM
+
+CMD ["sh", "-c", "trap 'kill -TERM $bun_pid $caddy_pid 2>/dev/null; wait' TERM INT; bun run src/server.ts & bun_pid=$!; caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & caddy_pid=$!; wait -n $bun_pid $caddy_pid; status=$?; kill -TERM $bun_pid $caddy_pid 2>/dev/null; wait; exit $status"]

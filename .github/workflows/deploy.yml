@@ -1,0 +1,322 @@
+name: Deploy Docker image
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: GHCR image tag to deploy
+        required: true
+        type: string
+      environment_name:
+        description: GitHub Environment containing the server configuration
+        required: true
+        type: string
+      core_network:
+        description: Core network passed to gocore
+        required: true
+        type: string
+    secrets:
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      SSH_PORT:
+        required: false
+      SSH_KNOWN_HOSTS:
+        required: true
+      LETS_ENCRYPT_EMAIL:
+        required: true
+      RPC_URL:
+        required: false
+      SUPABASE_TESTNET_SECRET_KEY:
+        required: true
+      SUPABASE_MAINNET_SECRET_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: GHCR image tag to deploy
+        required: true
+        type: string
+      environment_name:
+        description: GitHub Environment to deploy
+        required: true
+        type: choice
+        options:
+          - testnet-backup
+          - testnet-primary
+          - mainnet-backup
+          - mainnet-primary
+      core_network:
+        description: Core network passed to gocore
+        required: true
+        type: choice
+        options:
+          - devin
+          - mainnet
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-${{ inputs.environment_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment: ${{ inputs.environment_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+      CORE_NETWORK: ${{ inputs.core_network }}
+      PROJECT_NAME: txms-${{ inputs.environment_name }}
+      CONTAINER_NAME: txms-${{ inputs.environment_name }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      LETS_ENCRYPT_EMAIL: ${{ secrets.LETS_ENCRYPT_EMAIL }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || 'txms-server' }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+      DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+      RPC_URL: ${{ secrets.RPC_URL || vars.RPC_URL || 'http://127.0.0.1:8545' }}
+      RPC_METHOD: ${{ vars.RPC_METHOD || 'xcb_sendRawTransaction' }}
+      LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
+      SUPABASE_TESTNET_URL: ${{ vars.SUPABASE_TESTNET_URL }}
+      SUPABASE_TESTNET_SECRET_KEY: ${{ secrets.SUPABASE_TESTNET_SECRET_KEY }}
+      SUPABASE_MAINNET_URL: ${{ vars.SUPABASE_MAINNET_URL }}
+      SUPABASE_MAINNET_SECRET_KEY: ${{ secrets.SUPABASE_MAINNET_SECRET_KEY }}
+      SUPABASE_TIMEOUT_MS: ${{ vars.SUPABASE_TIMEOUT_MS || '5000' }}
+      REPOSITORY_OWNER: ${{ github.repository_owner }}
+      DEPLOY_TEMP: ${{ github.workspace }}/.txms-deploy-${{ github.run_id }}-${{ github.job }}
+
+    steps:
+      - name: Checkout deployment files
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          fail() {
+            echo "$1" >&2
+            exit 1
+          }
+          single_line() {
+            [[ -n "$2" && "$2" != *$'\n'* && "$2" != *$'\r'* ]] || fail "$1 is missing or contains a newline"
+          }
+
+          [[ "$IMAGE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$ ]] || fail "Invalid image tag"
+          [[ "$ENVIRONMENT_NAME" =~ ^(testnet|mainnet)-(backup|primary)$ ]] || fail "Invalid environment name"
+          [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]{0,62}$ ]] || fail "Invalid Compose project name"
+          [[ "$CONTAINER_NAME" =~ ^[a-z0-9][a-z0-9_.-]{0,62}$ ]] || fail "Invalid container name"
+          if [[ "$ENVIRONMENT_NAME" == testnet-* ]]; then
+            [[ "$CORE_NETWORK" == "devin" ]] || fail "Testnet environments require CORE_NETWORK=devin"
+          else
+            [[ "$CORE_NETWORK" == "mainnet" ]] || fail "Mainnet environments require CORE_NETWORK=mainnet"
+          fi
+
+          [[ "$SSH_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || fail "SSH_HOST must be a hostname or IPv4 address"
+          [[ "$SSH_USER" =~ ^[A-Za-z_][A-Za-z0-9_-]{0,31}$ ]] || fail "SSH_USER is invalid"
+          if [[ ! "$SSH_PORT" =~ ^[0-9]+$ ]] || (( SSH_PORT < 1 || SSH_PORT > 65535 )); then
+            fail "SSH_PORT must be between 1 and 65535"
+          fi
+          single_line "LETS_ENCRYPT_EMAIL" "$LETS_ENCRYPT_EMAIL"
+          [[ "$LETS_ENCRYPT_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$ ]] || fail "LETS_ENCRYPT_EMAIL is invalid"
+          [[ -n "$SSH_PRIVATE_KEY" ]] || fail "SSH_PRIVATE_KEY is missing"
+          [[ -n "$SSH_KNOWN_HOSTS" ]] || fail "SSH_KNOWN_HOSTS is missing"
+
+          single_line "DEPLOY_PATH" "$DEPLOY_PATH"
+          [[ "$DEPLOY_PATH" != *//* && "/$DEPLOY_PATH/" != */../* && "/$DEPLOY_PATH/" != */./* ]] || fail "DEPLOY_PATH contains unsafe path components"
+          if [[ "$DEPLOY_PATH" == /* ]]; then
+            [[ "$DEPLOY_PATH" =~ ^/(srv|opt)/txms-server(/[A-Za-z0-9._-]+)*$ ]] || fail "Absolute DEPLOY_PATH must be under /srv/txms-server or /opt/txms-server"
+          else
+            [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$ ]] || fail "Relative DEPLOY_PATH is invalid"
+          fi
+
+          [[ -n "$DOMAIN_NAME" && ${#DOMAIN_NAME} -le 253 && "$DOMAIN_NAME" != *..* ]] || fail "DOMAIN_NAME is missing or invalid"
+          IFS='.' read -ra domain_labels <<< "$DOMAIN_NAME"
+          (( ${#domain_labels[@]} >= 2 )) || fail "DOMAIN_NAME must be a fully qualified domain name"
+          for label in "${domain_labels[@]}"; do
+            [[ ${#label} -le 63 && "$label" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$ ]] || fail "DOMAIN_NAME contains an invalid label"
+          done
+
+          single_line "RPC_URL" "$RPC_URL"
+          [[ "$RPC_URL" =~ ^https?://[A-Za-z0-9][A-Za-z0-9:/?\&=._~%+@,-]*$ ]] || fail "RPC_URL must be an HTTP(S) URL without shell-sensitive characters"
+          [[ "$RPC_METHOD" =~ ^[A-Za-z][A-Za-z0-9_]{0,127}$ ]] || fail "RPC_METHOD is invalid"
+          [[ "$LOG_LEVEL" =~ ^(debug|info|warn|error)$ ]] || fail "LOG_LEVEL must be debug, info, warn, or error"
+          if [[ ! "$SUPABASE_TIMEOUT_MS" =~ ^[0-9]+$ ]] || (( SUPABASE_TIMEOUT_MS < 100 || SUPABASE_TIMEOUT_MS > 30000 )); then
+            fail "SUPABASE_TIMEOUT_MS must be between 100 and 30000"
+          fi
+
+          if [[ "$CORE_NETWORK" == "devin" ]]; then
+            supabase_url=$SUPABASE_TESTNET_URL
+            supabase_secret_key=$SUPABASE_TESTNET_SECRET_KEY
+          else
+            supabase_url=$SUPABASE_MAINNET_URL
+            supabase_secret_key=$SUPABASE_MAINNET_SECRET_KEY
+          fi
+          single_line "SUPABASE_URL" "$supabase_url"
+          single_line "SUPABASE_SECRET_KEY" "$supabase_secret_key"
+          [[ "$supabase_url" =~ ^https://[A-Za-z0-9][A-Za-z0-9:/?\&=._~%+@,-]*$ ]] || fail "SUPABASE_URL must be an HTTPS URL without shell-sensitive characters"
+          [[ "$supabase_secret_key" =~ ^[A-Za-z0-9._-]+$ ]] || fail "SUPABASE_SECRET_KEY contains unsupported characters"
+
+          if [[ -z "$HEALTHCHECK_URL" ]]; then
+            echo "HEALTHCHECK_URL=https://$DOMAIN_NAME/ping" >> "$GITHUB_ENV"
+          else
+            single_line "HEALTHCHECK_URL" "$HEALTHCHECK_URL"
+            [[ "$HEALTHCHECK_URL" == "https://$DOMAIN_NAME" || "$HEALTHCHECK_URL" == "https://$DOMAIN_NAME/"* ]] || fail "HEALTHCHECK_URL must use HTTPS on DOMAIN_NAME"
+            [[ "$HEALTHCHECK_URL" != *[[:space:]#]* ]] || fail "HEALTHCHECK_URL contains unsupported characters"
+          fi
+          echo "IMAGE_NAME=ghcr.io/${REPOSITORY_OWNER,,}/txms-server" >> "$GITHUB_ENV"
+
+      - name: Prepare deployment files
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          install -d -m 700 "$DEPLOY_TEMP"
+          install -m 600 .github/deploy/compose.yml "$DEPLOY_TEMP/compose.yml"
+          install -m 700 .github/deploy/deploy.sh "$DEPLOY_TEMP/deploy.sh"
+          printf '%s\n' "$DEPLOY_PATH" > "$DEPLOY_TEMP/deploy-path"
+          printf '%s\n' "$PROJECT_NAME" > "$DEPLOY_TEMP/project-name"
+          {
+            printf 'IMAGE_NAME=%s\n' "$IMAGE_NAME"
+            printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG"
+            printf 'CONTAINER_NAME=%s\n' "$CONTAINER_NAME"
+          } > "$DEPLOY_TEMP/.compose.env"
+          if [[ "$CORE_NETWORK" == "devin" ]]; then
+            supabase_url=$SUPABASE_TESTNET_URL
+            supabase_secret_key=$SUPABASE_TESTNET_SECRET_KEY
+          else
+            supabase_url=$SUPABASE_MAINNET_URL
+            supabase_secret_key=$SUPABASE_MAINNET_SECRET_KEY
+          fi
+          {
+            printf 'DOMAIN_NAME=%s\n' "$DOMAIN_NAME"
+            printf 'LETS_ENCRYPT_EMAIL=%s\n' "$LETS_ENCRYPT_EMAIL"
+            printf 'LOG_LEVEL=%s\n' "$LOG_LEVEL"
+            printf 'PORT=8080\n'
+            printf 'PROVIDER_TYPE=rpc\n'
+            printf 'RPC_URL=%s\n' "$RPC_URL"
+            printf 'RPC_METHOD=%s\n' "$RPC_METHOD"
+            printf 'CORE_NETWORK=%s\n' "$CORE_NETWORK"
+            printf 'SUPABASE_URL=%s\n' "$supabase_url"
+            printf 'SUPABASE_SECRET_KEY=%s\n' "$supabase_secret_key"
+            printf 'SUPABASE_TIMEOUT_MS=%s\n' "$SUPABASE_TIMEOUT_MS"
+          } > "$DEPLOY_TEMP/.runtime.env"
+          chmod 600 "$DEPLOY_TEMP"/* "$DEPLOY_TEMP"/.compose.env "$DEPLOY_TEMP"/.runtime.env
+          chmod 700 "$DEPLOY_TEMP/deploy.sh"
+
+      - name: Configure SSH
+        id: configure-ssh
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          install -d -m 700 "$DEPLOY_TEMP/ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$DEPLOY_TEMP/ssh/deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$DEPLOY_TEMP/ssh/known_hosts"
+          chmod 600 "$DEPLOY_TEMP/ssh/deploy_key" "$DEPLOY_TEMP/ssh/known_hosts"
+          cat > "$DEPLOY_TEMP/ssh/config" <<SSH_CONFIG
+          Host txms-deploy-target
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile $DEPLOY_TEMP/ssh/deploy_key
+            UserKnownHostsFile $DEPLOY_TEMP/ssh/known_hosts
+            BatchMode yes
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 15
+            ServerAliveCountMax 3
+          SSH_CONFIG
+          chmod 600 "$DEPLOY_TEMP/ssh/config"
+          ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target 'command -v bash >/dev/null 2>&1 || { echo "bash is required on the deployment server" >&2; exit 1; }'
+
+      - name: Deploy with Docker Compose
+        id: deploy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          remote_stage=''
+          cleanup_remote() {
+            if [[ -n "$remote_stage" && "$remote_stage" =~ ^/tmp/txms-deploy\.[A-Za-z0-9]+$ ]]; then
+              printf -v cleanup_command 'find %q -mindepth 1 -delete 2>/dev/null; rmdir %q 2>/dev/null || true' "$remote_stage" "$remote_stage"
+              ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target "$cleanup_command" || true
+            fi
+          }
+          trap cleanup_remote EXIT
+
+          remote_stage=$(ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target 'umask 077; mktemp -d "/tmp/txms-deploy.XXXXXX"')
+          [[ "$remote_stage" =~ ^/tmp/txms-deploy\.[A-Za-z0-9]+$ ]] || {
+            echo "Remote server returned an unsafe staging path" >&2
+            exit 1
+          }
+          scp -F "$DEPLOY_TEMP/ssh/config" \
+            "$DEPLOY_TEMP/compose.yml" \
+            "$DEPLOY_TEMP/deploy.sh" \
+            "$DEPLOY_TEMP/deploy-path" \
+            "$DEPLOY_TEMP/project-name" \
+            "$DEPLOY_TEMP/.compose.env" \
+            "$DEPLOY_TEMP/.runtime.env" \
+            "txms-deploy-target:$remote_stage/"
+          printf -v deploy_command 'cd -- %q && exec bash ./deploy.sh' "$remote_stage"
+          ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target "$deploy_command"
+          remote_stage=''
+
+      - name: Verify HTTPS health
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for attempt in {1..12}; do
+            echo "HTTPS health check attempt $attempt of 12"
+            if response=$(curl --fail --silent --show-error --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 15 "$HEALTHCHECK_URL"); then
+              printf '%s\n' "$response"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "HTTPS health check failed after 12 attempts: $HEALTHCHECK_URL" >&2
+          exit 1
+
+      - name: Report deployment diagnostics
+        if: ${{ failure() && steps.deploy.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf -v diagnostics_command 'bash -s -- %q %q' "$DEPLOY_PATH" "$PROJECT_NAME"
+          ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target "$diagnostics_command" < .github/deploy/diagnostics.sh
+
+      - name: Remove superseded TxMS images
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf -v cleanup_command 'bash -s -- %q %q' "$IMAGE_NAME" "$CONTAINER_NAME"
+          ssh -F "$DEPLOY_TEMP/ssh/config" txms-deploy-target "$cleanup_command" < .github/deploy/cleanup-images.sh
+
+      - name: Remove temporary deployment files
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          case "$DEPLOY_TEMP" in
+            "$GITHUB_WORKSPACE"/.txms-deploy-*) ;;
+            *)
+              echo "Refusing to clean unexpected DEPLOY_TEMP: $DEPLOY_TEMP" >&2
+              exit 1
+              ;;
+          esac
+          if [[ -d "$DEPLOY_TEMP" ]]; then
+            find "$DEPLOY_TEMP" -mindepth 1 -delete
+            rmdir "$DEPLOY_TEMP"
+          fi

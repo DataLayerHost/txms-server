@@ -15,7 +15,7 @@ This server provides the following services:
 
 ### Requirements
 
-- **Node.js**: Version 20 or above.
+- **Bun**: Version 1.3.14 or above.
 - **Docker**: Ensure Docker (and Docker Compose - if needed) are installed.
 
 ### Setting Up Environment Variables
@@ -26,17 +26,20 @@ The necessary environment variables are:
 
 - **LETS_ENCRYPT_EMAIL**: The email address for Let's Encrypt registration.
 - **DOMAIN_NAME**: The domain name for which the SSL certificate will be issued.
-- **PROVIDER**: The URL of the blockchain provider (e.g., Blockbook).
-- **ENDPOINT**: The specific endpoint for streaming Core Transactions. For Blockbook, ending with a `/` is mandatory!
+- **PROVIDER**: The URL of a Blockbook provider. Required only when `PROVIDER_TYPE=blockbook`.
+- **ENDPOINT**: The Blockbook transaction endpoint. Required only when `PROVIDER_TYPE=blockbook`.
 - **LOG_LEVEL**: The logging level (e.g., `info`, `debug`, `warn`, `error`).
 - **MMS**: Set to `true` to enable MMS support; otherwise `false`.
 - **PORT**: The port on which the server will run.
 - **BODY_NAME**: The name of the body parameter in the request. Default is `body`.
 - **MEDIA_NAME**: The name of the MMS media Urls array parameter in the request. Default is `mediaUrls`.
 - **MEDIA_TYPE_NAME**: The name of the MMS media content type array parameter in the request. Default is `mediaContentTypes`.
-- **PROVIDER_TYPE**: The type of the provider (e.g., `blockbook`, `rpc`).
-- **RPC_URL**: The URL of the RPC provider. Required if `PROVIDER_TYPE` is `rpc`. Default is `http://localhost:8545`.
+- **PROVIDER_TYPE**: Transaction submission type. Defaults to `rpc`; set it to `blockbook` to use the legacy web-provider path.
+- **RPC_URL**: The Core JSON-RPC endpoint. Defaults to `http://localhost:8545`.
 - **RPC_METHOD**: The RPC method to call. Required if `PROVIDER_TYPE` is `rpc`. Default is `xcb_sendRawTransaction`.
+- **SUPABASE_URL**: Supabase project URL used by `QUERY /pro`.
+- **SUPABASE_SECRET_KEY**: Backend-only Supabase secret key used by `QUERY /pro`.
+- **SUPABASE_TIMEOUT_MS**: Optional Supabase timeout in milliseconds. Defaults to `5000`.
 
 ### Docker Deployment
 
@@ -63,7 +66,7 @@ Note: Customize your setup and replace `{version}` with the latest release versi
 
 We are providing customized Docker images for the server. You can use the following images:
 
-- Dockerfile: main Docker image with Node.js and Caddy to be connected with the blockchain provider.
+- Dockerfile: main Docker image with Bun and Caddy to be connected with the blockchain provider.
 - Dockerfile.core: Docker image to be connected with the Core Blockchain using RPC.
 
 ### Docker Compose Example
@@ -108,8 +111,41 @@ To automate the Docker image build and push process upon creating a release, Git
 The workflow file `.github/workflows/release-docker-image.yml` handles:
 
 - Checking out the code.
-- Building the Docker image using Node.js 20 LTS and Caddy.
+- Installing dependencies, type-checking, testing, and building with Bun before creating images.
+- Building the Docker image using Bun 1.3.14 and Caddy.
 - Pushing the Docker image to GitHub's Docker registry.
+- Publishing the standard image as `{version}`/`latest` and the bundled gocore image as `{version}-core`/`core-latest`.
+
+After publishing the image, the release workflow invokes `.github/workflows/deploy.yml` sequentially for four GitHub Environments. Create environments named `testnet-backup`, `testnet-primary`, `mainnet-backup`, and `mainnet-primary`. Configure the following secrets separately in each environment:
+
+- `SSH_HOST`: Production server hostname or IP address.
+- `SSH_USER`: SSH account used for deployment.
+- `SSH_PRIVATE_KEY`: Private key accepted by the production server.
+- `SSH_PORT`: Optional SSH port; defaults to `22`.
+- `SSH_KNOWN_HOSTS`: Pinned SSH host-key line for the production server.
+- `LETS_ENCRYPT_EMAIL`: Email used for Caddy certificate management.
+- `RPC_URL`: Optional secret alternative to the `RPC_URL` variable when the URL contains credentials.
+
+Configure these GitHub Actions variables separately in each environment:
+
+- `DOMAIN_NAME`: Public TxMS hostname, such as `txms.example.com`.
+- `DEPLOY_PATH`: Server deployment directory. Defaults to `~/txms-server` and is created automatically. Relative paths remain inside the SSH user's home; explicit absolute paths must be under `/srv/txms-server` or `/opt/txms-server`.
+- `HEALTHCHECK_URL`: Optional public health URL, such as `https://txms.example.com/ping`.
+- `RPC_URL`: Optional hosted Core JSON-RPC URL, such as `https://rpc.example.com`. The bundled Core image defaults to its local node when this is unset.
+- `RPC_METHOD`: Optional submission method; defaults to `xcb_sendRawTransaction`.
+- `LOG_LEVEL`: Optional application and Caddy log level: `debug`, `info`, `warn`, or `error`. Defaults to `info`.
+- `SUPABASE_TIMEOUT_MS`: Optional Pro lookup timeout; defaults to `5000` milliseconds.
+
+Configure the two Supabase projects once at repository level under **Settings → Secrets and variables → Actions**:
+
+- Repository secrets: `SUPABASE_TESTNET_SECRET_KEY`, `SUPABASE_MAINNET_SECRET_KEY`.
+- Repository variables: `SUPABASE_TESTNET_URL`, `SUPABASE_MAINNET_URL`.
+
+The deployment workflow selects the testnet project for `CORE_NETWORK=devin` and the mainnet project for `CORE_NETWORK=mainnet`. Only the selected credentials are written to each server.
+
+The workflow securely stages `compose.yml`, a Compose interpolation file, and a protected runtime environment file, then atomically installs them with mode `600`. SSH requires the pinned host key and uses non-interactive, single-identity connections. No manual Compose setup or GHCR login is required because the image is public. The remote user must have passwordless access to Docker without `sudo` and must have the Docker Compose plugin installed. Deployment order is testnet backup, testnet primary, mainnet backup, then mainnet primary. Each server must pass its HTTPS health check before the next deployment starts. Testnet runs gocore with the `devin` network and mainnet uses `mainnet`. Automatic deployment uses the bundled Core image and defaults to its local JSON-RPC endpoint at `http://127.0.0.1:8545`. Setting `RPC_URL` switches a server to a hosted RPC domain. After each new release passes its health check, superseded TxMS images are removed. Active images, named volumes, Core chain data, Caddy certificates, and unrelated images are preserved.
+
+Deployed containers are named `txms-testnet-backup`, `txms-testnet-primary`, `txms-mainnet-backup`, and `txms-mainnet-primary` according to their target GitHub Environment.
 
 ## Firewall Rules
 
@@ -134,10 +170,45 @@ sudo ufw status
 
 ## Endpoints
 
-- **GET `/`**: I'm a teapot (and I'm a cyber).
-- **POST `/`**: Stream - Handles incoming transaction messages and forwards them to Blockbook.
+- **GET `/`**: Service status and current server time.
+- **POST `/`**: Handles incoming transaction messages and submits them through the configured RPC or Blockbook provider.
+- **QUERY `/pro`**: Normalize a phone number and check active Pro status in the network-specific Supabase project.
 - **GET `/info`**: Info - Returns the application name and version.
 - **GET `/ping`**: Ping - A simple health check endpoint.
+
+### Pro status
+
+Request:
+
+```http
+QUERY /pro HTTP/1.1
+Content-Type: application/json
+
+{"number":"+421 900-123-456"}
+```
+
+Formatting is removed before lookup, producing `421900123456`. The endpoint follows RFC 10008 media-type requirements, advertises `Accept-Query: "application/json"`, and sends `Cache-Control: no-store`. An account is active only when it exists, is not suspended, its activation time has arrived, and its expiration time has not passed.
+
+Active response:
+
+```json
+{
+  "pro": true,
+  "level": 1
+}
+```
+
+Missing or inactive response:
+
+```json
+{
+  "pro": false
+}
+```
+
+Input errors, missing configuration, connection failures, and invalid Supabase responses return a non-200 status.
+
+Apply `supabase/migrations/20260720000000_create_pro_accounts.sql` independently to the testnet and mainnet Supabase projects using `supabase db push`. Pro lookups accept rows whose `service` is `txms` or `all`; an explicit `txms` row takes priority when both exist. The column defaults to `txms`. The migration enables Row Level Security, denies public table access, and schedules daily deletion of expired accounts through `pg_cron`.
 
 ## Connectors
 

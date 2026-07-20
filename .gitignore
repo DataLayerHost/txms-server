@@ -4,12 +4,16 @@ results
 
 npm-debug.log
 /node_modules/
+bun.lock
+bun.lockb
 yarn.lock
 yarn-error.log
 package-lock.json
+pnpm-lock.yaml
 
 /dist-test/
 /dist/
+/supabase/
 
 .DS_Store
 .AppleDouble
