@@ -1,6 +1,6 @@
 {
 	"name": "txms-server",
-	"version": "1.2.9",
+	"version": "1.2.10",
 	"description": "TxMS server",
 	"main": "src/server.ts",
 	"engines": {

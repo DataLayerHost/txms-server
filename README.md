@@ -123,12 +123,12 @@ After publishing the image, the release workflow invokes `.github/workflows/depl
 - `SSH_PRIVATE_KEY`: Private key accepted by the production server.
 - `SSH_PORT`: Optional SSH port; defaults to `22`.
 - `SSH_KNOWN_HOSTS`: Pinned SSH host-key line for the production server.
-- `LETS_ENCRYPT_EMAIL`: Email used for Caddy certificate management.
 - `RPC_URL`: Optional secret alternative to the `RPC_URL` variable when the URL contains credentials.
 
 Configure these GitHub Actions variables separately in each environment:
 
 - `DOMAIN_NAME`: Public TxMS hostname, such as `txms.example.com`.
+- `LETS_ENCRYPT_EMAIL`: Email used for Caddy certificate management. This can be configured once as a repository variable or overridden per environment.
 - `DEPLOY_PATH`: Server deployment directory. Defaults to `~/txms-server` and is created automatically. Relative paths remain inside the SSH user's home; explicit absolute paths must be under `/srv/txms-server` or `/opt/txms-server`.
 - `HEALTHCHECK_URL`: Optional public health URL, such as `https://txms.example.com/ping`.
 - `RPC_URL`: Optional hosted Core JSON-RPC URL, such as `https://rpc.example.com`. The bundled Core image defaults to its local node when this is unset.

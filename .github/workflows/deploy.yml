@@ -26,8 +26,6 @@ on:
         required: false
       SSH_KNOWN_HOSTS:
         required: true
-      LETS_ENCRYPT_EMAIL:
-        required: true
       RPC_URL:
         required: false
       SUPABASE_TESTNET_SECRET_KEY:
@@ -80,7 +78,7 @@ jobs:
       SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
-      LETS_ENCRYPT_EMAIL: ${{ secrets.LETS_ENCRYPT_EMAIL }}
+      LETS_ENCRYPT_EMAIL: ${{ vars.LETS_ENCRYPT_EMAIL }}
       DEPLOY_PATH: ${{ vars.DEPLOY_PATH || 'txms-server' }}
       HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
       DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
