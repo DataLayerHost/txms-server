@@ -57,7 +57,7 @@ app.get('/ping', (c) => {
 	return c.text('OK', 200);
 });
 
-app.on('QUERY', '/pro', async (c) => {
+app.on(['QUERY', 'POST'], '/pro', async (c) => {
 	c.header('Cache-Control', 'no-store');
 	c.header('Accept-Query', '"application/json"');
 	const contentType = c.req.header('Content-Type');
