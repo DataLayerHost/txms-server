@@ -171,7 +171,7 @@ sudo ufw status
 
 - **GET `/`**: Service status and current server time.
 - **POST `/`**: Handles incoming transaction messages and submits them through the configured RPC or Blockbook provider.
-- **QUERY `/pro`**: Normalize a phone number and check active Pro status in the network-specific Supabase project.
+- **QUERY or POST `/pro`**: Normalize a phone number and check active Pro status in the network-specific Supabase project. Both methods use the same JSON request body and response format.
 - **GET `/info`**: Info - Returns the application name and version.
 - **GET `/ping`**: Ping - A simple health check endpoint.
 
@@ -185,6 +185,8 @@ Content-Type: application/json
 
 {"number":"+421 900-123-456"}
 ```
+
+Clients without `QUERY` support may send the identical request body using `POST /pro`.
 
 Formatting is removed before lookup, producing `421900123456`. The endpoint follows RFC 10008 media-type requirements, advertises `Accept-Query: "application/json"`, and sends `Cache-Control: no-store`. An account is active only when it exists, is not suspended, its activation time has arrived, and its expiration time has not passed.
 
