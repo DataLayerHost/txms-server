@@ -17,6 +17,8 @@ const rpcMethod = process.env.RPC_METHOD || 'xcb_sendRawTransaction';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type JsonRecord = Record<string, unknown>;
+const FAILED_MESSAGE_PREFIX = 'Failed: ';
+const SMS_MESSAGE_MAX_LENGTH = 160;
 const logLevel: LogLevel = configuredLogLevel === 'debug' || configuredLogLevel === 'warn' || configuredLogLevel === 'error'
 	? configuredLogLevel
 	: 'info';
@@ -211,7 +213,7 @@ async function sendTransaction(hextx: string): Promise<Response> {
 			} else {
 				const errorMessage = responseData?.error ? simplifyErrorMessage(String(responseData.error)) : 'Unknown error';
 				log('debug', 'Transaction Failed', errorMessage);
-				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+				return new Response(JSON.stringify({ message: failedMessage(errorMessage), sent: false, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 			}
 		} catch (err) {
 			const error = `Error: Unable to process transaction.`;
@@ -253,7 +255,7 @@ async function sendTransaction(hextx: string): Promise<Response> {
 					? simplifyErrorMessage(String(rpcError.message))
 					: 'Unknown error';
 				log('debug', 'Transaction Failed', errorMessage);
-				return new Response(JSON.stringify({ message: errorMessage, sent: false, date: timestamp() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+				return new Response(JSON.stringify({ message: failedMessage(errorMessage), sent: false, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 			}
 		} catch (err) {
 			const error = `Error: Unable to process transaction.`;
@@ -265,6 +267,10 @@ async function sendTransaction(hextx: string): Promise<Response> {
 		log('error', 'Unknown provider type', error);
 		return new Response(JSON.stringify({ message: error, sent: false, date: timestamp() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
 	}
+}
+
+export function failedMessage(reason: string): string {
+	return `${FAILED_MESSAGE_PREFIX}${reason}`.slice(0, SMS_MESSAGE_MAX_LENGTH);
 }
 
 function simplifyErrorMessage(error: string): string {
