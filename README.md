@@ -37,6 +37,9 @@ The necessary environment variables are:
 - **PROVIDER_TYPE**: Transaction submission type. Defaults to `rpc`; set it to `blockbook` to use the legacy web-provider path.
 - **RPC_URL**: The Core JSON-RPC endpoint. Defaults to `http://localhost:8545`.
 - **RPC_METHOD**: The RPC method to call. Required if `PROVIDER_TYPE` is `rpc`. Default is `xcb_sendRawTransaction`.
+- **WELL_KNOWN_URL**: Optional CORE token-registry base URL used to resolve
+  CBC20 tickers and decimals. Defaults to
+  `https://coreblockchain.net/.well-known/tokens`.
 - **SUPABASE_URL**: Supabase project URL used by `QUERY /pro`.
 - **SUPABASE_SECRET_KEY**: Backend-only Supabase secret key used by `QUERY /pro`.
 - **SUPABASE_TIMEOUT_MS**: Optional Supabase timeout in milliseconds. Defaults to `5000`.
@@ -239,6 +242,27 @@ To do so, you can modify the code and create database of numbers, which paid for
 ## SMS and MMS
 
 The server can handle both SMS and MMS messages. To enable MMS, set the `MMS` environment variable to `true`.
+
+After a transaction is accepted, the server retrieves it from Core RPC. Native
+transfers are reported as `XCB`; supported CBC20 transfers resolve their ticker
+and decimals through the CORE Well-Known registry. A successful enriched reply
+uses this compact format:
+
+```text
+OK -1.25 USDX TxID: 0x…
+```
+
+The minus sign identifies an outgoing transaction and a future plus sign will
+identify an incoming transaction. Client libraries return the amount unsigned
+and expose the direction separately.
+
+When a CBC20 contract is not in the registry, its uppercase ICAN address is
+used in place of the ticker. The contract's `decimals()` value is read on-chain
+so the amount remains correctly formatted. Contract addresses and transaction
+IDs are never shortened. The server emits the SMS receipt only when the entire
+message fits within the 160-character single-SMS limit. If metadata is not yet
+available, or the complete receipt cannot fit, the JSON response retains the
+full transaction ID and reports that no SMS receipt was produced.
 
 MMS messages can contain attachments (content type: `text/plain`), which are fetched and forwarded to the blockchain provider. Ideally set extension as `.txms.txt`. You can generate them using the [TxMS Encoder](https://github.com/bchainhub/txms.js) and function `downloadMessage`.
 
