@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import txms from 'txms.js';
 import packageInfo from '../package.json' with { type: 'json' };
 import { checkProRequest, ProLookupError } from './pro.ts';
+import { detectTransactionReceipt, type TransactionReceiptAsset } from './receipt.ts';
 
 const app = new Hono();
 const configuredLogLevel = process.env.LOG_LEVEL;
@@ -14,6 +15,7 @@ const providerUrl = process.env.PROVIDER || '';
 const provider = providerUrl ? (providerUrl.endsWith('/') ? providerUrl : `${providerUrl}/`) + (process.env.ENDPOINT || '') : '';
 const rpcUrl = process.env.RPC_URL || 'http://localhost:8545';
 const rpcMethod = process.env.RPC_METHOD || 'xcb_sendRawTransaction';
+const wellKnownUrl = process.env.WELL_KNOWN_URL || 'https://coreblockchain.net/.well-known/tokens';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 type JsonRecord = Record<string, unknown>;
@@ -207,9 +209,7 @@ async function sendTransaction(hextx: string): Promise<Response> {
 
 			if (response.ok && responseData && typeof responseData.result === 'string') {
 				const txid = responseData.result;
-				const ok = `OK TxID: ${txid}`;
-				log('debug', 'Transaction Successful', ok);
-				return new Response(JSON.stringify({ message: ok, sent: true, txid, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+				return successfulTransactionResponse(txid);
 			} else {
 				const errorMessage = responseData?.error ? simplifyErrorMessage(String(responseData.error)) : 'Unknown error';
 				log('debug', 'Transaction Failed', errorMessage);
@@ -246,9 +246,7 @@ async function sendTransaction(hextx: string): Promise<Response> {
 
 			if (response.ok && responseData && typeof responseData.result === 'string') {
 				const txid = responseData.result;
-				const ok = `OK TxID: ${txid}`;
-				log('debug', 'Transaction Successful', ok);
-				return new Response(JSON.stringify({ message: ok, sent: true, txid, date: timestamp() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+				return successfulTransactionResponse(txid);
 			} else {
 				const rpcError = responseData?.error;
 				const errorMessage = rpcError && typeof rpcError === 'object' && 'message' in rpcError
@@ -267,6 +265,61 @@ async function sendTransaction(hextx: string): Promise<Response> {
 		log('error', 'Unknown provider type', error);
 		return new Response(JSON.stringify({ message: error, sent: false, date: timestamp() }), { status: 500, headers: { 'Content-Type': 'application/json' } });
 	}
+}
+
+export function successMessage(txid: string, receipt: TransactionReceiptAsset): string {
+	const normalizedTxid = txid.startsWith('0x') ? txid : `0x${txid}`;
+	const sign = receipt.direction === 'outgoing' ? '-' : '+';
+	const message = `OK ${sign}${receipt.amount} ${receipt.asset} TxID: ${normalizedTxid}`;
+	if (message.length > SMS_MESSAGE_MAX_LENGTH) {
+		throw new RangeError('The complete transaction receipt exceeds one SMS');
+	}
+	return message;
+}
+
+async function successfulTransactionResponse(txid: string): Promise<Response> {
+	let receipt: TransactionReceiptAsset | null = null;
+	try {
+		receipt = await detectTransactionReceipt(txid, {
+			rpcUrl,
+			network: rpcMethod.split('_', 1)[0] || 'xcb',
+			wellKnownUrl,
+		});
+	} catch (error) {
+		log('warn', 'Unable to enrich successful transaction receipt', error);
+	}
+	if (!receipt) {
+		return new Response(JSON.stringify({
+			message: 'Transaction accepted, but its receipt is not available yet.',
+			sent: true,
+			receipt: false,
+			txid,
+			date: timestamp(),
+		}), { status: 202, headers: { 'Content-Type': 'application/json' } });
+	}
+	let message: string;
+	try {
+		message = successMessage(txid, receipt);
+	} catch (error) {
+		log('warn', 'Successful transaction receipt exceeds one SMS', error);
+		return new Response(JSON.stringify({
+			message: 'Transaction accepted, but its receipt exceeds one SMS.',
+			sent: true,
+			receipt: false,
+			txid,
+			date: timestamp(),
+		}), { status: 422, headers: { 'Content-Type': 'application/json' } });
+	}
+	log('debug', 'Transaction Successful', message);
+	return new Response(JSON.stringify({
+		message,
+		sent: true,
+		txid,
+		amount: receipt?.amount,
+		asset: receipt?.asset,
+		direction: receipt.direction,
+		date: timestamp(),
+	}), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
 export function failedMessage(reason: string): string {
